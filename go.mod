@@ -3,10 +3,15 @@ module github.com/openshift/osd-metrics-exporter
 go 1.13
 
 require (
+	github.com/coreos/prometheus-operator v0.35.1
+	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/openshift/operator-custom-metrics v0.4.0
 	github.com/operator-framework/operator-sdk v0.16.0
+	github.com/prometheus/client_golang v1.2.1
 	github.com/spf13/pflag v1.0.5
-	k8s.io/apimachinery v0.15.7
+	github.com/stretchr/testify v1.4.0
+	k8s.io/api v0.16.2
+	k8s.io/apimachinery v0.16.2
 	k8s.io/client-go v12.0.0+incompatible
 	sigs.k8s.io/controller-runtime v0.4.0
 )

@@ -8,19 +8,25 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	operatorConfig "github.com/openshift/osd-metrics-exporter/config"
 	"github.com/openshift/osd-metrics-exporter/pkg/apis"
 	"github.com/openshift/osd-metrics-exporter/pkg/controller"
+	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	"github.com/openshift/osd-metrics-exporter/version"
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 
-	"github.com/openshift/operator-custom-metrics/pkg/metrics"
+	promOperatorv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	configv1 "github.com/openshift/api/config/v1"
+	routev1 "github.com/openshift/api/route/v1"
+	customMetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
+	"k8s.io/client-go/kubernetes/scheme"
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -31,7 +37,7 @@ import (
 
 // Change below variables to serve metrics on different host or port.
 var (
-	metricsPort int = 8383
+	metricsPort = 8383
 )
 var log = logf.Log.WithName("cmd")
 
@@ -116,23 +122,47 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup metrics collector
+	collector := metrics.NewMetricsAggregator(time.Minute)
+	metrics.Aggregator = collector
+	done := collector.Run()
+	defer close(done)
+
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-
-	log.Info("Starting the Cmd.")
-	metricsConfig := metrics.NewBuilder(operatorConfig.OperatorNamespace, operatorConfig.OperatorName).
-		WithPath("/metrics").
-		WithPort(strconv.Itoa(metricsPort)).
-		WithRoute().
-		GetConfig()
-
-	if err = metrics.ConfigureMetrics(context.Background(), *metricsConfig); err != nil {
+	clientScheme := scheme.Scheme
+	err = promOperatorv1.AddToScheme(clientScheme)
+	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+	err = routev1.Install(clientScheme)
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	err = configv1.Install(clientScheme)
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	metricsConfig := customMetrics.NewBuilder(operatorConfig.OperatorNamespace, operatorConfig.OperatorName).
+		WithPath("/metrics").
+		WithPort(strconv.Itoa(metricsPort)).
+		WithServiceMonitor().
+		WithCollectors(metrics.Aggregator.GetMetrics()).
+		GetConfig()
+	if err = customMetrics.ConfigureMetrics(context.TODO(), *metricsConfig); err != nil {
+		log.Error(err, "Failed to run metrics server")
+		os.Exit(1)
+	}
+
+	log.Info("Starting the Cmd.")
 
 	// Start the Cmd
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {

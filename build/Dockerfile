@@ -4,9 +4,7 @@ COPY go.sum /
 RUN go mod download
 COPY . /osd-metrics-exporter
 WORKDIR /osd-metrics-exporter
-ENV GO111MODULE=on
-ENV GOFLAGS='-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}"'
-RUN go build -o build/_output/bin/osd-metrics-exporter ./cmd/manager/main.go
+RUN make go-build
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 ENV OPERATOR=/usr/local/bin/osd-metrics-exporter \
