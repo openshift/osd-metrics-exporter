@@ -129,7 +129,7 @@ func main() {
 		WithRoute().
 		GetConfig()
 
-	if metrics.ConfigureMetrics(context.Background(), *metricsConfig); err != nil {
+	if err = metrics.ConfigureMetrics(context.Background(), *metricsConfig); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
