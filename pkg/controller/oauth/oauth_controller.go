@@ -20,7 +20,7 @@ import (
 var log = logf.Log.WithName("controller_oauth")
 
 const (
-	finalizer = "finalizers.osd.adoption.exporter.openshift.io"
+	finalizer = "finalizers.osd.metrics.exporter.openshift.io"
 )
 
 // Add creates a new OAuth Controller and adds it to the Manager. The Manager will set fields on the Controller

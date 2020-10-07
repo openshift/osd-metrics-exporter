@@ -25,6 +25,7 @@ type AdoptionMetricsAggregator struct {
 	aggregationInterval time.Duration
 }
 
+// NewMetricsAggregator creates a metric aggregator. Should not be used directory but through GetMetricsAggregator
 func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAggregator {
 	collector := &AdoptionMetricsAggregator{
 		identityProviders: prometheus.NewGaugeVec(prometheus.GaugeOpts{

@@ -23,7 +23,7 @@ import (
 var log = logf.Log.WithName("controller_cluster_role")
 
 const (
-	finalizer        = "adoption-exporter/finalizer"
+	finalizer        = "osd-metrics-exporter/finalizer"
 	clusterAdminName = "cluster-admin"
 )
 
