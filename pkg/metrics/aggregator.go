@@ -29,7 +29,7 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 	collector := &AdoptionMetricsAggregator{
 		identityProviders: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name:        "identity_provider",
-			Help:        "Indicates if a identity provider is enabled",
+			Help:        "Indicates if an identity provider is enabled",
 			ConstLabels: map[string]string{"name": "osd_exporter"},
 		}, []string{providerLabel}),
 		clusterAdmin: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -69,7 +69,7 @@ func (a *AdoptionMetricsAggregator) SetOAuthIDP(name, namespace string, provider
 	a.providerMap[providerKey{name: name, namespace: namespace}] = providerTypes
 }
 
-func (a *AdoptionMetricsAggregator) DeleteAuthIDP(name, namespace string) {
+func (a *AdoptionMetricsAggregator) DeleteOAuthIDP(name, namespace string) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 	delete(a.providerMap, providerKey{name: name, namespace: namespace})

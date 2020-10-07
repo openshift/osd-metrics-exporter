@@ -2,17 +2,20 @@ package clusterrole
 
 import (
 	"context"
-
-	"github.com/openshift/osd-metrics-exporter/pkg/controller/utils"
+	"fmt"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -20,7 +23,8 @@ import (
 var log = logf.Log.WithName("controller_cluster_role")
 
 const (
-	finalizer = "adoption-exporter/finalizer"
+	finalizer        = "adoption-exporter/finalizer"
+	clusterAdminName = "cluster-admin"
 )
 
 // Add creates a new Cluster Role Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -31,7 +35,11 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileClusterRole{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileClusterRole{
+		client:            mgr.GetClient(),
+		scheme:            mgr.GetScheme(),
+		metricsAggregator: metrics.GetMetricsAggregator(),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -43,7 +51,20 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource ClusterRole
-	err = c.Watch(&source.Kind{Type: &rbacv1.ClusterRole{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &rbacv1.ClusterRole{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
+		CreateFunc: func(event event.CreateEvent) bool {
+			return event.Meta.GetName() == clusterAdminName
+		},
+		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
+			return deleteEvent.Meta.GetName() == clusterAdminName
+		},
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			return updateEvent.MetaNew.GetName() == clusterAdminName
+		},
+		GenericFunc: func(genericEvent event.GenericEvent) bool {
+			return genericEvent.Meta.GetName() == clusterAdminName
+		},
+	})
 	if err != nil {
 		return err
 	}
@@ -58,8 +79,9 @@ var _ reconcile.Reconciler = &ReconcileClusterRole{}
 type ReconcileClusterRole struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client            client.Client
+	scheme            *runtime.Scheme
+	metricsAggregator *metrics.AdoptionMetricsAggregator
 }
 
 // Reconcile reads that state of the cluster for a ClusterRole object and makes changes based on the state read
@@ -86,28 +108,37 @@ func (r *ReconcileClusterRole) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	if instance.Name != "cluster-admin" {
-		return reconcile.Result{}, nil
+	if instance.Name != clusterAdminName {
+		// This should never happen because we filter out other cluster roles in the predicates
+		return reconcile.Result{}, fmt.Errorf("received unknown cluster role: %s", instance.Name)
 	}
 
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !utils.ContainsString(instance.ObjectMeta.Finalizers, finalizer) {
-			instance.ObjectMeta.Finalizers = append(instance.ObjectMeta.Finalizers, finalizer)
-			if err = r.client.Update(context.Background(), instance); err != nil {
+		if !containsString(instance.ObjectMeta.Finalizers, finalizer) {
+			controllerutil.AddFinalizer(instance, finalizer)
+			if err := r.client.Update(context.Background(), instance); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
-		metrics.Aggregator.SetClusterAdmin(true)
+		r.metricsAggregator.SetClusterAdmin(true)
 	} else {
-		if utils.ContainsString(instance.ObjectMeta.Finalizers, finalizer) {
-			instance.ObjectMeta.Finalizers = utils.RemoveString(instance.ObjectMeta.Finalizers, finalizer)
-			if err = r.client.Update(context.Background(), instance); err != nil {
+		if containsString(instance.ObjectMeta.Finalizers, finalizer) {
+			controllerutil.RemoveFinalizer(instance, finalizer)
+			if err := r.client.Update(context.Background(), instance); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
-		metrics.Aggregator.DeleteAuthIDP(instance.Name, instance.Namespace)
-		metrics.Aggregator.SetClusterAdmin(false)
+		r.metricsAggregator.SetClusterAdmin(false)
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func containsString(stringArray []string, candidate string) bool {
+	for _, s := range stringArray {
+		if s == candidate {
+			return true
+		}
+	}
+	return false
 }

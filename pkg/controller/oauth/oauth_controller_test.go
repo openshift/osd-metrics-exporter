@@ -51,14 +51,15 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metrics.Aggregator = metrics.NewMetricsAggregator(time.Second)
-			done := metrics.Aggregator.Run()
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			done := metricsAggregator.Run()
 			defer close(done)
 			err := openshiftapi.Install(scheme.Scheme)
 			require.NoError(t, err)
 			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, makeTestOAuth("test", "test", tc.providers...))
 			reconciler := ReconcileOAuth{
-				client: fakeClient,
+				client:            fakeClient,
+				metricsAggregator: metricsAggregator,
 			}
 			result, err := reconciler.Reconcile(reconcile.Request{
 				NamespacedName: types.NamespacedName{
@@ -74,7 +75,7 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: "test", Namespace: "test"}, &testOAuth)
 			require.NoError(t, err)
 			require.Contains(t, testOAuth.ObjectMeta.Finalizers, finalizer)
-			metric := metrics.Aggregator.GetIdentityProviderMetric()
+			metric := metricsAggregator.GetIdentityProviderMetric()
 			for _, p := range tc.providers {
 				val := testutil.ToFloat64(metric.With(prometheus.Labels{providerLabel: string(p)}))
 				require.Equal(t, 1.0, val, "provider label: %s", string(p))

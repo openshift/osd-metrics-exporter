@@ -4,12 +4,12 @@ import (
 	"context"
 
 	openshiftapi "github.com/openshift/api/config/v1"
-	"github.com/openshift/osd-metrics-exporter/pkg/controller/utils"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -23,11 +23,6 @@ const (
 	finalizer = "finalizers.osd.adoption.exporter.openshift.io"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new OAuth Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -36,7 +31,11 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileOAuth{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileOAuth{
+		client:            mgr.GetClient(),
+		scheme:            mgr.GetScheme(),
+		metricsAggregator: metrics.GetMetricsAggregator(),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -63,8 +62,9 @@ var _ reconcile.Reconciler = &ReconcileOAuth{}
 type ReconcileOAuth struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client            client.Client
+	scheme            *runtime.Scheme
+	metricsAggregator *metrics.AdoptionMetricsAggregator
 }
 
 // Reconcile reads that state of the cluster for a OAuth object and makes changes based on the state read
@@ -92,22 +92,31 @@ func (r *ReconcileOAuth) Reconcile(request reconcile.Request) (reconcile.Result,
 	}
 
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !utils.ContainsString(instance.ObjectMeta.Finalizers, finalizer) {
-			instance.ObjectMeta.Finalizers = append(instance.ObjectMeta.Finalizers, finalizer)
-			if err = r.client.Update(context.Background(), instance); err != nil {
+		if !containsString(instance.ObjectMeta.Finalizers, finalizer) {
+			controllerutil.AddFinalizer(instance, finalizer)
+			if err := r.client.Update(context.Background(), instance); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
-		metrics.Aggregator.SetOAuthIDP(instance.Name, instance.Namespace, instance.Spec.IdentityProviders)
+		r.metricsAggregator.SetOAuthIDP(instance.Name, instance.Namespace, instance.Spec.IdentityProviders)
 	} else {
-		if utils.ContainsString(instance.ObjectMeta.Finalizers, finalizer) {
-			instance.ObjectMeta.Finalizers = utils.RemoveString(instance.ObjectMeta.Finalizers, finalizer)
-			if err = r.client.Update(context.Background(), instance); err != nil {
+		if containsString(instance.ObjectMeta.Finalizers, finalizer) {
+			controllerutil.RemoveFinalizer(instance, finalizer)
+			if err := r.client.Update(context.Background(), instance); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
-		metrics.Aggregator.DeleteAuthIDP(instance.Name, instance.Namespace)
+		r.metricsAggregator.DeleteOAuthIDP(instance.Name, instance.Namespace)
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func containsString(stringArray []string, candidate string) bool {
+	for _, s := range stringArray {
+		if s == candidate {
+			return true
+		}
+	}
+	return false
 }

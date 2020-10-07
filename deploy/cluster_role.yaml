@@ -18,7 +18,6 @@ rules:
   resources:
     - clusterroles
   verbs:
-    - create
     - get
     - list
     - patch

@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
+	customMetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 	operatorConfig "github.com/openshift/osd-metrics-exporter/config"
 	"github.com/openshift/osd-metrics-exporter/pkg/apis"
 	"github.com/openshift/osd-metrics-exporter/pkg/controller"
@@ -19,7 +19,6 @@ import (
 	promOperatorv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
-	customMetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
@@ -123,10 +122,18 @@ func main() {
 	}
 
 	// Setup metrics collector
-	collector := metrics.NewMetricsAggregator(time.Minute)
-	metrics.Aggregator = collector
+	collector := metrics.GetMetricsAggregator()
 	done := collector.Run()
 	defer close(done)
+	metricsConfig := customMetrics.NewBuilder(operatorConfig.OperatorNamespace, operatorConfig.OperatorName).
+		WithPath("/metrics").
+		WithPort(strconv.Itoa(metricsPort)).
+		WithServiceMonitor().
+		GetConfig()
+	if err = customMetrics.ConfigureMetrics(context.TODO(), *metricsConfig); err != nil {
+		log.Error(err, "Failed to run metrics server")
+		os.Exit(1)
+	}
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
@@ -151,19 +158,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	metricsConfig := customMetrics.NewBuilder(operatorConfig.OperatorNamespace, operatorConfig.OperatorName).
-		WithPath("/metrics").
-		WithPort(strconv.Itoa(metricsPort)).
-		WithServiceMonitor().
-		WithCollectors(metrics.Aggregator.GetMetrics()).
-		GetConfig()
-	if err = customMetrics.ConfigureMetrics(context.TODO(), *metricsConfig); err != nil {
-		log.Error(err, "Failed to run metrics server")
-		os.Exit(1)
-	}
-
 	log.Info("Starting the Cmd.")
-
 	// Start the Cmd
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		log.Error(err, "Manager exited non-zero")

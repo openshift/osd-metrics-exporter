@@ -18,35 +18,44 @@ import (
 
 func TestReconcileClusterRole_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		crName  string
-		enabled bool
+		name        string
+		crName      string
+		enabled     bool
+		expectError bool
 	}{
 		{
-			name:    "enabled",
-			crName:  "cluster-admin",
-			enabled: true,
+			name:        "enabled",
+			crName:      "cluster-admin",
+			enabled:     true,
+			expectError: false,
 		},
 		{
-			name:    "disabled",
-			crName:  "cluster-owner",
-			enabled: false,
+			name:        "disabled",
+			crName:      "cluster-owner",
+			expectError: true,
 		},
 	} {
 		t.Run(tc.name, func(tt *testing.T) {
-			metrics.Aggregator = metrics.NewMetricsAggregator(time.Second * 2)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second * 2)
 			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, &rbacv1.ClusterRole{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: tc.crName,
 				},
 			})
 			reconciler := &ReconcileClusterRole{
-				client: fakeClient,
+				client:            fakeClient,
+				metricsAggregator: metricsAggregator,
 			}
-			result, err := reconciler.Reconcile(reconcile.Request{})
+			result, err := reconciler.Reconcile(reconcile.Request{
+				NamespacedName: types.NamespacedName{Name: tc.crName},
+			})
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
 			require.NotNil(t, result)
-			crMetric := metrics.Aggregator.GetClusterRoleMetric()
+			crMetric := metricsAggregator.GetClusterRoleMetric()
 			value := testutil.ToFloat64(crMetric)
 			clusterRole := &rbacv1.ClusterRole{}
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: tc.crName}, clusterRole)
