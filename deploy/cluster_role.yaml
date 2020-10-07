@@ -1,0 +1,33 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: osd-metrics-exporter
+rules:
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - oauths
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+    - rbac.authorization.k8s.io
+  resources:
+    - clusterroles
+  verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - rbac.authorization.k8s.io
+  resources:
+    - clusterroles/finalizers
+  verbs:
+    - create
+    - patch
+    - update
