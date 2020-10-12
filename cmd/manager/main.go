@@ -24,7 +24,6 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
-	"k8s.io/client-go/kubernetes/scheme"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -120,6 +119,21 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+	err = promOperatorv1.AddToScheme(mgr.GetScheme())
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	err = routev1.Install(mgr.GetScheme())
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	err = configv1.Install(mgr.GetScheme())
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
 
 	// Setup metrics collector
 	collector := metrics.GetMetricsAggregator()
@@ -137,23 +151,6 @@ func main() {
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-	clientScheme := scheme.Scheme
-	err = promOperatorv1.AddToScheme(clientScheme)
-	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-	err = routev1.Install(clientScheme)
-	if err != nil {
-		log.Error(err, "")
-		os.Exit(1)
-	}
-
-	err = configv1.Install(clientScheme)
-	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
