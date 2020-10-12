@@ -129,6 +129,7 @@ func main() {
 		WithPath("/metrics").
 		WithPort(strconv.Itoa(metricsPort)).
 		WithServiceMonitor().
+		WithCollectors(metrics.GetMetricsAggregator().GetMetrics()).
 		GetConfig()
 	if err = customMetrics.ConfigureMetrics(context.TODO(), *metricsConfig); err != nil {
 		log.Error(err, "Failed to run metrics server")
