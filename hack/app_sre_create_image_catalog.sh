@@ -20,7 +20,7 @@ git clone \
     "$SAAS_OPERATOR_DIR"
 
 # ensure bundle directory exists when repository is new
-mkdir -p $"BUNDLE_DIR"
+mkdir -p "$BUNDLE_DIR"
 
 # remove any versions more recent than deployed hash
 REMOVED_VERSIONS=""
