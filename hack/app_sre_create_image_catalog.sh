@@ -19,6 +19,9 @@ git clone \
     https://app:"${APP_SRE_BOT_PUSH_TOKEN}"@gitlab.cee.redhat.com/service/saas-osd-metrics-exporter-bundle.git \
     "$SAAS_OPERATOR_DIR"
 
+# ensure bundle directory exists when repository is new
+mkdir -p $"BUNDLE_DIR"
+
 # remove any versions more recent than deployed hash
 REMOVED_VERSIONS=""
 if [[ "$REMOVE_UNDEPLOYED" == true ]]; then
