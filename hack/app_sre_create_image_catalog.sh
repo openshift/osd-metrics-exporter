@@ -16,7 +16,7 @@ rm -rf "$SAAS_OPERATOR_DIR"
 
 git clone \
     --branch "$BRANCH_CHANNEL" \
-    https://app:"${APP_SRE_BOT_PUSH_TOKEN}"@gitlab.cee.redhat.com/service/saas-osd-metrics-exporter.git \
+    https://app:"${APP_SRE_BOT_PUSH_TOKEN}"@gitlab.cee.redhat.com/service/saas-osd-metrics-exporter-bundle.git \
     "$SAAS_OPERATOR_DIR"
 
 # remove any versions more recent than deployed hash
