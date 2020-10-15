@@ -1,0 +1,44 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: osd-metrics-exporter-0.0.1
+  namespace: openshift-osd-metrics
+  annotations:
+    categories: A list of comma separated categories that your operator falls under.
+    certified: "false"
+    description: Openshift Dedicated Metrics Exporter
+    containerImage: quay.io/app-sre/osd-metrics-exporter:latest
+    createdAt: "2020-10-15T11:35:00Z"
+    support: James Harrington
+spec:
+  displayName: osd-metrics-exporter
+  description: OSD metrics exporter.
+  keywords:
+  - kubernetes
+  - openshift
+  - multi-cluster
+  - cluster
+  version: 0.0.2
+  provider:
+    name: Red Hat, Inc
+  maturity: alpha
+  installModes:
+  - type: OwnNamespace
+    supported: true
+  - type: SingleNamespace
+    supported: true
+  - type: MultiNamespace
+    supported: false
+  - type: AllNamespaces
+    supported: false
+  install:
+    strategy: deployment
+    spec:
+      clusterPermissions:
+      - serviceAccountName: osd-metrics-exporter
+        # Rules will be added here by the generate-operator-bundle.py script.
+      deployments:
+      - name: osd-metrics-exporter
+        # Deployment spec will be added here by the generate-operator-bundle.py script.
+  customresourcedefinitions:
+    owned: []
