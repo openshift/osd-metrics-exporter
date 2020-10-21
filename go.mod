@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/coreos/prometheus-operator v0.35.1
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
-	github.com/openshift/operator-custom-metrics v0.4.0
+	github.com/openshift/operator-custom-metrics v0.4.1
 	github.com/operator-framework/operator-sdk v0.16.0
 	github.com/prometheus/client_golang v1.2.1
 	github.com/spf13/pflag v1.0.5
