@@ -1,4 +1,4 @@
-FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS builder
+FROM quay.io/app-sre/boilerplate:image-v0.1.2 AS builder
 COPY go.mod /
 COPY go.sum /
 RUN go mod download
