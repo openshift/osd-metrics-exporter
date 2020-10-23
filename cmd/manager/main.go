@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	userv1 "github.com/openshift/api/user/v1"
 	customMetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 	operatorConfig "github.com/openshift/osd-metrics-exporter/config"
 	"github.com/openshift/osd-metrics-exporter/pkg/apis"
@@ -130,6 +131,11 @@ func main() {
 		os.Exit(1)
 	}
 	err = configv1.Install(mgr.GetScheme())
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	err = userv1.Install(mgr.GetScheme())
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
