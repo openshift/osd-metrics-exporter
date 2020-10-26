@@ -16,6 +16,10 @@ osdk_version() {
     $osdk version | sed 's/operator-sdk version: "*\([^,"]*\)"*,.*/\1/'
 }
 
+repo_name() {
+    (git -C $1 config --get remote.upstream.url || git -C $1 config --get remote.origin.url) | sed 's,.*:,,; s/\.git$//'
+}
+
 if [ "$BOILERPLATE_SET_X" ]; then
   set -x
 fi
