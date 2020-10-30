@@ -1,10 +1,12 @@
+// Package clusterrole implements a controller for watching ClusterRole resources and tracking them.
+// Deprecated: Since we don't need to track ClusterRole objects anymore this is deprecated.
 package clusterrole
 
 import (
 	"context"
 	"fmt"
-	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 
+	"github.com/openshift/osd-metrics-exporter/pkg/controller/utils"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +40,6 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileClusterRole{
 		client:            mgr.GetClient(),
 		scheme:            mgr.GetScheme(),
-		metricsAggregator: metrics.GetMetricsAggregator(),
 	}
 }
 
@@ -81,12 +82,9 @@ type ReconcileClusterRole struct {
 	// that reads objects from the cache and writes to the apiserver
 	client            client.Client
 	scheme            *runtime.Scheme
-	metricsAggregator *metrics.AdoptionMetricsAggregator
 }
 
-// Reconcile reads that state of the cluster for a ClusterRole object and makes changes based on the state read
-// and what is in the ClusterRole.Spec
-// a Pod as an example
+// Reconcile reads the ClusterRole object and removes the finalizer if present. It does nothing other than that.
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -113,32 +111,12 @@ func (r *ReconcileClusterRole) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, fmt.Errorf("received unknown cluster role: %s", instance.Name)
 	}
 
-	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !containsString(instance.ObjectMeta.Finalizers, finalizer) {
-			controllerutil.AddFinalizer(instance, finalizer)
-			if err := r.client.Update(context.Background(), instance); err != nil {
-				return reconcile.Result{}, err
-			}
+	if utils.ContainsString(instance.ObjectMeta.Finalizers, finalizer) {
+		controllerutil.RemoveFinalizer(instance, finalizer)
+		if err := r.client.Update(context.Background(), instance); err != nil {
+			return reconcile.Result{}, err
 		}
-		r.metricsAggregator.SetClusterAdmin(true)
-	} else {
-		if containsString(instance.ObjectMeta.Finalizers, finalizer) {
-			controllerutil.RemoveFinalizer(instance, finalizer)
-			if err := r.client.Update(context.Background(), instance); err != nil {
-				return reconcile.Result{}, err
-			}
-		}
-		r.metricsAggregator.SetClusterAdmin(false)
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func containsString(stringArray []string, candidate string) bool {
-	for _, s := range stringArray {
-		if s == candidate {
-			return true
-		}
-	}
-	return false
 }
