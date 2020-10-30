@@ -32,6 +32,24 @@ rules:
     - patch
     - update
 - apiGroups:
+    - user.openshift.io
+  resources:
+    - groups
+  verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - user.openshift.io
+  resources:
+    - groups/finalizers
+  verbs:
+    - create
+    - patch
+    - update
+- apiGroups:
   - ""
   resources:
   - pods
