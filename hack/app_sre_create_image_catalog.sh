@@ -51,6 +51,7 @@ fi
 
 # generate bundle
 PREV_VERSION=$(ls "$BUNDLE_DIR" | sort -t . -k 3 -g | tail -n 1)
+PREV_OPERATOR_VERSION="osd-metrics-exporter.v${PREV_VERSION}"
 
 ./hack/generate-operator-bundle.py \
     "$BUNDLE_DIR" \
@@ -60,6 +61,7 @@ PREV_VERSION=$(ls "$BUNDLE_DIR" | sort -t . -k 3 -g | tail -n 1)
     "$QUAY_IMAGE:$GIT_HASH"
 
 NEW_VERSION=$(ls "$BUNDLE_DIR" | sort -t . -k 3 -g | tail -n 1)
+NEW_OPERATOR_VERSION="osd-metrics-exporter.v${NEW_VERSION}"
 
 if [ "$NEW_VERSION" = "$PREV_VERSION" ]; then
     # stopping script as that version was already built, so no need to rebuild it
@@ -71,7 +73,7 @@ cat <<EOF > $BUNDLE_DIR/osd-metrics-exporter.package.yaml
 packageName: osd-metrics-exporter
 channels:
 - name: $BRANCH_CHANNEL
-  currentCSV: osd-metrics-exporter.v${NEW_VERSION}
+  currentCSV: $NEW_OPERATOR_VERSION 
 EOF
 
 # add, commit & push
@@ -102,7 +104,24 @@ RUN initializer --permissive
 CMD ["registry-server", "-t", "/tmp/terminate.log"]
 EOF
 
-docker build -f $DOCKERFILE_REGISTRY --tag "${REGISTRY_IMG}:${BRANCH_CHANNEL}-latest" .
+CATALOG_IMAGE="${REGISTRY_IMG}:${BRANCH_CHANNEL}-latest"
+docker build -f $DOCKERFILE_REGISTRY --tag "$CATALOG_IMAGE" .
+
+cleanup() {
+   docker rm -f catalog-image || true
+}
+
+trap cleanup EXIT
+cleanup
+docker run --name catalog-image -d --rm --network host "$CATALOG_IMAGE"
+sleep 10
+
+REPLACES_VERSION=$(docker run --rm --network=host quay.io/rogbas/grpcurl -plaintext localhost:50051 api.Registry/ListBundles | jq -r 'select(.csvName == "'"osd-metrics-exporter.v0.1.44-b5a1309"'" ) | .replaces')
+
+if [[ "$REPLACES_VERSION" != "$PREV_OPERATOR_VERSION" ]]; then
+    echo "replaces field '$REPLACES_VERSION' in catalog does not match previous version $PREV_OPERATOR_VERSION"
+    exit 1
+fi
 
 # push image
 skopeo copy --dest-creds "${QUAY_USER}:${QUAY_TOKEN}" \
