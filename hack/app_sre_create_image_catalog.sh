@@ -116,7 +116,7 @@ cleanup
 docker run --name catalog-image -d --rm --network host "$CATALOG_IMAGE"
 sleep 10
 
-REPLACES_VERSION=$(docker run --rm --network=host quay.io/rogbas/grpcurl -plaintext localhost:50051 api.Registry/ListBundles | jq -r 'select(.csvName == "'"osd-metrics-exporter.v0.1.44-b5a1309"'" ) | .replaces')
+REPLACES_VERSION=$(docker run --rm --network=host quay.io/rogbas/grpcurl -plaintext localhost:50051 api.Registry/ListBundles | jq -r 'select(.csvName == "'"$NEW_OPERATOR_VERSION"'" ) | .replaces')
 
 if [[ "$REPLACES_VERSION" != "$PREV_OPERATOR_VERSION" ]]; then
     echo "replaces field '$REPLACES_VERSION' in catalog does not match previous version $PREV_OPERATOR_VERSION"
