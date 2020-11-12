@@ -20,6 +20,8 @@ import (
 
 const (
 	providerLabel = "provider"
+	testName      = "test"
+	testNamespace = "test"
 )
 
 func makeTestOAuth(name, namespace string, providers ...openshiftapi.IdentityProviderType) *openshiftapi.OAuth {
@@ -38,8 +40,10 @@ func makeTestOAuth(name, namespace string, providers ...openshiftapi.IdentityPro
 }
 func TestReconcileOAuth_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
-		name      string
-		providers []openshiftapi.IdentityProviderType
+		name              string
+		providers         []openshiftapi.IdentityProviderType
+		existingProviders []openshiftapi.IdentityProviderType
+		expectedResult    map[openshiftapi.IdentityProviderType]int
 	}{
 		{
 			name: "basic",
@@ -47,6 +51,27 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 				openshiftapi.IdentityProviderTypeGoogle,
 				openshiftapi.IdentityProviderTypeGitHub,
 				openshiftapi.IdentityProviderTypeLDAP,
+			},
+			expectedResult: map[openshiftapi.IdentityProviderType]int{
+				openshiftapi.IdentityProviderTypeGoogle: 1,
+				openshiftapi.IdentityProviderTypeGitHub: 1,
+				openshiftapi.IdentityProviderTypeLDAP:   1,
+			},
+		},
+		{
+			name: "provider removed",
+			providers: []openshiftapi.IdentityProviderType{
+				openshiftapi.IdentityProviderTypeGoogle,
+				openshiftapi.IdentityProviderTypeGitHub,
+			},
+			existingProviders: []openshiftapi.IdentityProviderType{
+				openshiftapi.IdentityProviderTypeBasicAuth,
+				openshiftapi.IdentityProviderTypeGoogle,
+			},
+			expectedResult: map[openshiftapi.IdentityProviderType]int{
+				openshiftapi.IdentityProviderTypeGoogle:    1,
+				openshiftapi.IdentityProviderTypeGitHub:    1,
+				openshiftapi.IdentityProviderTypeBasicAuth: 0,
 			},
 		},
 	} {
@@ -56,15 +81,29 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 			defer close(done)
 			err := openshiftapi.Install(scheme.Scheme)
 			require.NoError(t, err)
-			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, makeTestOAuth("test", "test", tc.providers...))
+			if tc.existingProviders == nil {
+				tc.existingProviders = make([]openshiftapi.IdentityProviderType, 0)
+			}
+			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, makeTestOAuth(testName, testNamespace, tc.existingProviders...))
 			reconciler := ReconcileOAuth{
 				client:            fakeClient,
 				metricsAggregator: metricsAggregator,
 			}
+			_, err = reconciler.Reconcile(reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: testNamespace,
+					Name:      testName,
+				},
+			})
+			require.NoError(t, err)
+
+			err = fakeClient.Update(context.Background(), makeTestOAuth(testName, testNamespace, tc.providers...))
+			require.NoError(t, err)
+
 			result, err := reconciler.Reconcile(reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Namespace: "test",
-					Name:      "test",
+					Namespace: testNamespace,
+					Name:      testName,
 				},
 			})
 			// sleep to allow the aggregator to aggregate metrics in the background
@@ -76,9 +115,9 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Contains(t, testOAuth.ObjectMeta.Finalizers, finalizer)
 			metric := metricsAggregator.GetIdentityProviderMetric()
-			for _, p := range tc.providers {
+			for p, v := range tc.expectedResult {
 				val := testutil.ToFloat64(metric.With(prometheus.Labels{providerLabel: string(p)}))
-				require.Equal(t, 1.0, val, "provider label: %s", string(p))
+				require.EqualValues(t, v, val, "provider label: %s", string(p))
 			}
 
 		})
