@@ -4,13 +4,25 @@ import (
 	"sync"
 	"time"
 
-	v1 "github.com/openshift/api/config/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
 	providerLabel = "provider"
 )
+
+var knownIdentityProviderTypes = []configv1.IdentityProviderType{
+	configv1.IdentityProviderTypeBasicAuth,
+	configv1.IdentityProviderTypeGitHub,
+	configv1.IdentityProviderTypeGitLab,
+	configv1.IdentityProviderTypeGoogle,
+	configv1.IdentityProviderTypeHTPasswd,
+	configv1.IdentityProviderTypeKeystone,
+	configv1.IdentityProviderTypeLDAP,
+	configv1.IdentityProviderTypeOpenID,
+	configv1.IdentityProviderTypeRequestHeader,
+}
 
 type providerKey struct {
 	name      string
@@ -20,7 +32,7 @@ type providerKey struct {
 type AdoptionMetricsAggregator struct {
 	identityProviders   *prometheus.GaugeVec
 	clusterAdmin        prometheus.Gauge
-	providerMap         map[providerKey][]v1.IdentityProviderType
+	providerMap         map[providerKey][]configv1.IdentityProviderType
 	mutex               sync.Mutex
 	aggregationInterval time.Duration
 }
@@ -37,7 +49,7 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 			Name: "cluster_admin_enabled",
 			Help: "Indicates if the cluster-admin role is enabled",
 		}),
-		providerMap:         make(map[providerKey][]v1.IdentityProviderType),
+		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
 	}
 	collector.clusterAdmin.Set(0)
@@ -60,8 +72,8 @@ func (a *AdoptionMetricsAggregator) Run() chan interface{} {
 	return done
 }
 
-func (a *AdoptionMetricsAggregator) SetOAuthIDP(name, namespace string, provider []v1.IdentityProvider) {
-	providerTypes := make([]v1.IdentityProviderType, len(provider))
+func (a *AdoptionMetricsAggregator) SetOAuthIDP(name, namespace string, provider []configv1.IdentityProvider) {
+	providerTypes := make([]configv1.IdentityProviderType, len(provider))
 	for i, p := range provider {
 		providerTypes[i] = p.Type
 	}
@@ -79,7 +91,7 @@ func (a *AdoptionMetricsAggregator) DeleteOAuthIDP(name, namespace string) {
 func (a *AdoptionMetricsAggregator) aggregate() {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	providers := make(map[v1.IdentityProviderType]int)
+	providers := make(map[configv1.IdentityProviderType]int)
 	for _, v := range a.providerMap {
 		for _, p := range v {
 			if _, ok := providers[p]; !ok {
@@ -89,8 +101,12 @@ func (a *AdoptionMetricsAggregator) aggregate() {
 		}
 	}
 
-	for k, v := range providers {
-		a.identityProviders.With(prometheus.Labels{providerLabel: string(k)}).Set(float64(v))
+	for _, t := range knownIdentityProviderTypes {
+		if count, ok := providers[t]; ok {
+			a.identityProviders.With(prometheus.Labels{providerLabel: string(t)}).Set(float64(count))
+		} else {
+			a.identityProviders.With(prometheus.Labels{providerLabel: string(t)}).Set(0)
+		}
 	}
 }
 
