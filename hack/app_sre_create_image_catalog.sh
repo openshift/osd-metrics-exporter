@@ -8,6 +8,13 @@ QUAY_IMAGE="$2"
 GIT_HASH=$(git rev-parse --short=7 HEAD)
 GIT_COMMIT_COUNT=$(git rev-list $(git rev-list --max-parents=0 HEAD)..HEAD --count)
 
+# Get the repo URI + image digest
+REPO_DIGEST=$(docker image inspect ${QUAY_IMAGE}:${GIT_HASH} --format '{{index .RepoDigests 0}}')
+if [[ -z "$REPO_DIGEST" ]]; then
+    echo "Couldn't discover REPO_DIGEST for ${QUAY_IMAGE}:${GIT_HASH}!"
+    exit 1
+fi
+
 # clone bundle repo
 SAAS_OPERATOR_DIR="saas-osd-metrics-exporter"
 BUNDLE_DIR="$SAAS_OPERATOR_DIR/osd-metrics-exporter/"
@@ -58,7 +65,7 @@ PREV_OPERATOR_VERSION="osd-metrics-exporter.v${PREV_VERSION}"
     "$PREV_VERSION" \
     "$GIT_COMMIT_COUNT" \
     "$GIT_HASH" \
-    "$QUAY_IMAGE:$GIT_HASH"
+    "$REPO_DIGEST"
 
 NEW_VERSION=$(ls "$BUNDLE_DIR" | sort -t . -k 3 -g | tail -n 1)
 NEW_OPERATOR_VERSION="osd-metrics-exporter.v${NEW_VERSION}"
