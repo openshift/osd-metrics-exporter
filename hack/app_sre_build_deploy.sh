@@ -8,8 +8,7 @@ CURRENT_DIR=$(dirname "$0")
 
 BASE_IMG="osd-metrics-exporter"
 QUAY_IMAGE="quay.io/app-sre/${BASE_IMG}"
-# FIXME: Use ${GIT_HASH} instead of latest here. The easy way to do that would
-# be to not override this at all, since the default is correct.
+# FIXME: Don't override this. The default (set in standard.mk) is fine.
 IMG="${BASE_IMG}:latest"
 
 GIT_HASH=$(git rev-parse --short=7 HEAD)
