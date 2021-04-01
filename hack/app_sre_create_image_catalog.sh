@@ -11,9 +11,10 @@ GIT_COMMIT_COUNT=$(git rev-list $(git rev-list --max-parents=0 HEAD)..HEAD --cou
 # Get the repo URI + image digest
 # FIXME: This should inspect ${QUAY_IMAGE}:${GIT_HASH} instead, but we're
 # overriding ${IMG} in app_sre_build_deploy.sh. Fix that.
-REPO_DIGEST=$(docker image inspect ${QUAY_IMAGE}:latest --format '{{index .RepoDigests 0}}')
+LOCAL_IMG=osd-metrics-exporter:latest
+REPO_DIGEST=$(docker image inspect ${LOCAL_IMG} --format '{{index .RepoDigests 0}}')
 if [[ -z "$REPO_DIGEST" ]]; then
-    echo "Couldn't discover REPO_DIGEST for ${QUAY_IMAGE}:latest!"
+    echo "Couldn't discover REPO_DIGEST for ${LOCAL_IMG}!"
     exit 1
 fi
 
