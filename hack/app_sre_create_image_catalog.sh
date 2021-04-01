@@ -9,14 +9,12 @@ GIT_HASH=$(git rev-parse --short=7 HEAD)
 GIT_COMMIT_COUNT=$(git rev-list $(git rev-list --max-parents=0 HEAD)..HEAD --count)
 
 # Get the repo URI + image digest
-# FIXME: This should inspect ${QUAY_IMAGE}:${GIT_HASH} instead, but we're
-# overriding ${IMG} in app_sre_build_deploy.sh. Fix that.
-LOCAL_IMG=osd-metrics-exporter:latest
-REPO_DIGEST=$(docker image inspect ${LOCAL_IMG} --format '{{index .RepoDigests 0}}')
-if [[ -z "$REPO_DIGEST" ]]; then
-    echo "Couldn't discover REPO_DIGEST for ${LOCAL_IMG}!"
+IMAGE_DIGEST=$(skopeo inspect ${QUAY_IMAGE}:${GIT_HASH} | jq -r .Digest)
+if [[ -z "$IMAGE_DIGEST" ]]; then
+    echo "Couldn't discover IMAGE_DIGEST for ${QUAY_IMAGE}:${GIT_HASH}!"
     exit 1
 fi
+REPO_DIGEST=${QUAY_IMAGE}@${IMAGE_DIGEST}
 
 # clone bundle repo
 SAAS_OPERATOR_DIR="saas-osd-metrics-exporter"
