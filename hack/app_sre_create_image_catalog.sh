@@ -9,9 +9,9 @@ GIT_HASH=$(git rev-parse --short=7 HEAD)
 GIT_COMMIT_COUNT=$(git rev-list $(git rev-list --max-parents=0 HEAD)..HEAD --count)
 
 # Get the repo URI + image digest
-IMAGE_DIGEST=$(skopeo inspect ${QUAY_IMAGE}:${GIT_HASH} | jq -r .Digest)
+IMAGE_DIGEST=$(skopeo inspect docker://${QUAY_IMAGE}:${GIT_HASH} | jq -r .Digest)
 if [[ -z "$IMAGE_DIGEST" ]]; then
-    echo "Couldn't discover IMAGE_DIGEST for ${QUAY_IMAGE}:${GIT_HASH}!"
+    echo "Couldn't discover IMAGE_DIGEST for docker://${QUAY_IMAGE}:${GIT_HASH}!"
     exit 1
 fi
 REPO_DIGEST=${QUAY_IMAGE}@${IMAGE_DIGEST}
