@@ -9,9 +9,11 @@ GIT_HASH=$(git rev-parse --short=7 HEAD)
 GIT_COMMIT_COUNT=$(git rev-list $(git rev-list --max-parents=0 HEAD)..HEAD --count)
 
 # Get the repo URI + image digest
-REPO_DIGEST=$(docker image inspect ${QUAY_IMAGE}:${GIT_HASH} --format '{{index .RepoDigests 0}}')
+# FIXME: This should inspect ${QUAY_IMAGE}:${GIT_HASH} instead, but we're
+# overriding ${IMG} in app_sre_build_deploy.sh. Fix that.
+REPO_DIGEST=$(docker image inspect ${QUAY_IMAGE}:latest --format '{{index .RepoDigests 0}}')
 if [[ -z "$REPO_DIGEST" ]]; then
-    echo "Couldn't discover REPO_DIGEST for ${QUAY_IMAGE}:${GIT_HASH}!"
+    echo "Couldn't discover REPO_DIGEST for ${QUAY_IMAGE}:latest!"
     exit 1
 fi
 
