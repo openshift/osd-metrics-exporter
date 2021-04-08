@@ -20,8 +20,6 @@ if image_exists_in_repo "${REGISTRY_IMG}:${BRANCH_CHANNEL}-${GIT_HASH}"; then
     echo "properly. Nothing to do!"
     exit 0
 fi
-echo "BUILDING CATALOG!"
-exit 0
 
 # Get the repo URI + image digest
 IMAGE_DIGEST=$(skopeo inspect docker://${QUAY_IMAGE}:${GIT_HASH} | jq -r .Digest)
