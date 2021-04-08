@@ -2,11 +2,26 @@
 
 set -exv
 
+CURRENT_DIR=$(dirname "$0")
+source $CURRENT_DIR/common.sh
+
 BRANCH_CHANNEL="$1"
 QUAY_IMAGE="$2"
 
 GIT_HASH=$(git rev-parse --short=7 HEAD)
 GIT_COMMIT_COUNT=$(git rev-list $(git rev-list --max-parents=0 HEAD)..HEAD --count)
+
+REGISTRY_IMG="quay.io/app-sre/osd-metrics-exporter-registry"
+
+# If the catalog image already exists, short out
+if image_exists_in_repo "${REGISTRY_IMG}:${BRANCH_CHANNEL}-${GIT_HASH}"; then
+    echo "Catalog image ${REGISTRY_IMG}:${BRANCH_CHANNEL}-${GIT_HASH} already "
+    echo "exists. Assuming this means the saas bundle work has also been done "
+    echo "properly. Nothing to do!"
+    exit 0
+fi
+echo "BUILDING CATALOG!"
+exit 0
 
 # Get the repo URI + image digest
 IMAGE_DIGEST=$(skopeo inspect docker://${QUAY_IMAGE}:${GIT_HASH} | jq -r .Digest)
@@ -71,6 +86,10 @@ PREV_OPERATOR_VERSION="osd-metrics-exporter.v${PREV_VERSION}"
 NEW_VERSION=$(ls "$BUNDLE_DIR" | sort -t . -k 3 -g | tail -n 1)
 NEW_OPERATOR_VERSION="osd-metrics-exporter.v${NEW_VERSION}"
 
+# TODO: The only way this happens anymore is if the catalog image was manually
+# deleted from the registry. In that case, we don't actually want to bail out
+# here, because then we'll end up with a saas bundle but no catalog image. We
+# should noodle this and figure out what the right behavior should be.
 if [ "$NEW_VERSION" = "$PREV_VERSION" ]; then
     # stopping script as that version was already built, so no need to rebuild it
     exit 0
@@ -100,7 +119,6 @@ git push origin "$BRANCH_CHANNEL"
 popd
 
 # build the registry image
-REGISTRY_IMG="quay.io/app-sre/osd-metrics-exporter-registry"
 DOCKERFILE_REGISTRY="Dockerfile.olm-registry"
 
 cat <<EOF > $DOCKERFILE_REGISTRY
