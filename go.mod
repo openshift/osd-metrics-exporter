@@ -7,9 +7,9 @@ require (
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/openshift/operator-custom-metrics v0.4.1
 	github.com/operator-framework/operator-sdk v0.16.0
-	github.com/prometheus/client_golang v1.2.1
+	github.com/prometheus/client_golang v1.5.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.6.1
 	k8s.io/api v0.18.2
 	k8s.io/apimachinery v0.18.2
 	k8s.io/client-go v12.0.0+incompatible
@@ -19,6 +19,7 @@ require (
 // Pinned to kubernetes-1.16.2
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
+	github.com/openshift/prom-label-proxy => github.com/prometheus-community/prom-label-proxy v0.2.1-0.20210326180348-86116edcd16b
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8
