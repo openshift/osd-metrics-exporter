@@ -8,7 +8,7 @@ parameters:
   required: true
 - name: IMAGE_TAG
   required: true
-- name: REPO_DIGEST
+- name: IMAGE_DIGEST
   required: true
 - name: REPO_NAME
   value: osd-metrics-exporter
@@ -73,7 +73,7 @@ objects:
         name: osd-metrics-exporter-registry
         namespace: openshift-osd-metrics
       spec:
-        image: ${REPO_DIGEST}
+        image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
         affinity:
           nodeAffinity:
             preferredDuringSchedulingIgnoredDuringExecution:
