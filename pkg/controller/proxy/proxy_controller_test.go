@@ -2,14 +2,14 @@ package proxy
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
 	openshiftapi "github.com/openshift/api/config/v1"
+	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,10 +21,6 @@ import (
 const (
 	testName        = "test"
 	testNamespace   = "test"
-	proxyHTTPLabel  = "http"
-	proxyHTTPSLabel = "https"
-	proxyCALabel    = "trusted_ca"
-	proxyEnabled    = float64(1)
 )
 
 func makeTestProxy(name, namespace string, proxySpec openshiftapi.ProxySpec, proxyStatus openshiftapi.ProxyStatus) *openshiftapi.Proxy {
@@ -37,9 +33,10 @@ func makeTestProxy(name, namespace string, proxySpec openshiftapi.ProxySpec, pro
 }
 func TestReconcileProxy_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
-		name        string
-		proxyStatus openshiftapi.ProxyStatus
-		proxySpec   openshiftapi.ProxySpec
+		name            string
+		proxyStatus     openshiftapi.ProxyStatus
+		proxySpec       openshiftapi.ProxySpec
+		expectedResults string
 	}{
 		{
 			name: "with ca",
@@ -52,6 +49,11 @@ func TestReconcileProxy_Reconcile(t *testing.T) {
 				HTTPProxy:  "http://example.com",
 				HTTPSProxy: "https://example.com",
 			},
+			expectedResults: `
+# HELP cluster_proxy Indicates cluster proxy state
+# TYPE cluster_proxy gauge
+cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="1"} 1
+`,
 		},
 		{
 			name:      "no ca",
@@ -60,6 +62,11 @@ func TestReconcileProxy_Reconcile(t *testing.T) {
 				HTTPProxy:  "http://example.com",
 				HTTPSProxy: "https://example.com",
 			},
+			expectedResults: `
+# HELP cluster_proxy Indicates cluster proxy state
+# TYPE cluster_proxy gauge
+cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
+`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -89,18 +96,9 @@ func TestReconcileProxy_Reconcile(t *testing.T) {
 			var testProxy openshiftapi.Proxy
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: testName, Namespace: testNamespace}, &testProxy)
 			require.NoError(t, err)
-			// setup metric
 			metric := metricsAggregator.GetClusterProxyMetric()
-			metricWith := metric.With(prometheus.Labels{proxyHTTPLabel: "1", proxyHTTPSLabel: "1", proxyCALabel: "1"})
-			// enable metric
-			metricWith.Set(proxyEnabled)
-			metricEnabled := testutil.ToFloat64(metricWith)
-			require.EqualValues(t, 1, metricEnabled, "metric enabled")
-			// disable metric
-			metricWith.Set(0)
-			metricDisabled := testutil.ToFloat64(metricWith)
-			require.EqualValues(t, 0, metricDisabled, "metric enabled")
-
+			err = testutil.CollectAndCompare(metric, strings.NewReader(tc.expectedResults))
+			require.NoError(t, err)
 		})
 	}
 }

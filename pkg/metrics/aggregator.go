@@ -9,15 +9,11 @@ import (
 )
 
 const (
-<<<<<<< HEAD
 	providerLabel    = "provider"
-	osdExporterValue = "osd-exporter"
-=======
-	providerLabel   = "provider"
-	proxyHTTPLabel  = "http"
-	proxyHTTPSLabel = "https"
-	proxyCALabel    = "trusted_ca"
->>>>>>> 10e10d3 ([OSD-8061] Expose the metrics for proxy utilization)
+	osdExporterValue = "osd_exporter"
+	proxyHTTPLabel   = "http"
+	proxyHTTPSLabel  = "https"
+	proxyCALabel     = "trusted_ca"
 )
 
 var knownIdentityProviderTypes = []configv1.IdentityProviderType{
@@ -62,7 +58,7 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 		clusterProxy: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name:        "cluster_proxy",
 			Help:        "Indicates cluster proxy state",
-			ConstLabels: map[string]string{"name": "osd_exporter"},
+			ConstLabels: map[string]string{"name": osdExporterValue},
 		}, []string{proxyHTTPLabel, proxyHTTPSLabel, proxyCALabel}),
 		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
