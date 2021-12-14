@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	providerLabel = "provider"
+	providerLabel    = "provider"
+	osdExporterValue = "osd-exporter"
 )
 
 var knownIdentityProviderTypes = []configv1.IdentityProviderType{
@@ -43,11 +44,12 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 		identityProviders: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name:        "identity_provider",
 			Help:        "Indicates if an identity provider is enabled",
-			ConstLabels: map[string]string{"name": "osd_exporter"},
+			ConstLabels: map[string]string{"name": osdExporterValue},
 		}, []string{providerLabel}),
 		clusterAdmin: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "cluster_admin_enabled",
-			Help: "Indicates if the cluster-admin role is enabled",
+			Name:        "cluster_admin_enabled",
+			Help:        "Indicates if the cluster-admin role is enabled",
+			ConstLabels: map[string]string{"name": osdExporterValue},
 		}),
 		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
