@@ -10,7 +10,10 @@ import (
 
 const (
 	providerLabel    = "provider"
-	osdExporterValue = "osd-exporter"
+	osdExporterValue = "osd_exporter"
+	proxyHTTPLabel   = "http"
+	proxyHTTPSLabel  = "https"
+	proxyCALabel     = "trusted_ca"
 )
 
 var knownIdentityProviderTypes = []configv1.IdentityProviderType{
@@ -34,6 +37,7 @@ type AdoptionMetricsAggregator struct {
 	identityProviders   *prometheus.GaugeVec
 	clusterAdmin        prometheus.Gauge
 	providerMap         map[providerKey][]configv1.IdentityProviderType
+	clusterProxy        *prometheus.GaugeVec
 	mutex               sync.Mutex
 	aggregationInterval time.Duration
 }
@@ -51,6 +55,11 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 			Help:        "Indicates if the cluster-admin role is enabled",
 			ConstLabels: map[string]string{"name": osdExporterValue},
 		}),
+		clusterProxy: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name:        "cluster_proxy",
+			Help:        "Indicates cluster proxy state",
+			ConstLabels: map[string]string{"name": osdExporterValue},
+		}, []string{proxyHTTPLabel, proxyHTTPSLabel, proxyCALabel}),
 		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
 	}
@@ -120,8 +129,16 @@ func (a *AdoptionMetricsAggregator) SetClusterAdmin(enabled bool) {
 	}
 }
 
+func (a *AdoptionMetricsAggregator) SetClusterProxy(proxyHTTP string, proxyHTTPS string, proxyTrustedCA string, proxyEnabled int) {
+	a.clusterProxy.With(prometheus.Labels{
+		proxyHTTPLabel:  proxyHTTP,
+		proxyHTTPSLabel: proxyHTTPS,
+		proxyCALabel:    proxyTrustedCA,
+	}).Set(float64(proxyEnabled))
+}
+
 func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
-	return []prometheus.Collector{a.identityProviders, a.clusterAdmin}
+	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.clusterProxy}
 }
 
 func (a *AdoptionMetricsAggregator) GetClusterRoleMetric() prometheus.Gauge {
@@ -130,4 +147,8 @@ func (a *AdoptionMetricsAggregator) GetClusterRoleMetric() prometheus.Gauge {
 
 func (a *AdoptionMetricsAggregator) GetIdentityProviderMetric() *prometheus.GaugeVec {
 	return a.identityProviders
+}
+
+func (a *AdoptionMetricsAggregator) GetClusterProxyMetric() *prometheus.GaugeVec {
+	return a.clusterProxy
 }
