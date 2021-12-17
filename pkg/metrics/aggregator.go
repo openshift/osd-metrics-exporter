@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	providerLabel    = "provider"
-	osdExporterValue = "osd_exporter"
-	proxyHTTPLabel   = "http"
-	proxyHTTPSLabel  = "https"
-	proxyCALabel     = "trusted_ca"
+	providerLabel       = "provider"
+	osdExporterValue    = "osd_exporter"
+	proxyHTTPLabel      = "http"
+	proxyHTTPSLabel     = "https"
+	proxyCALabel        = "trusted_ca"
+	proxyCASubjectLabel = "subject"
 )
 
 var knownIdentityProviderTypes = []configv1.IdentityProviderType{
@@ -34,12 +35,14 @@ type providerKey struct {
 }
 
 type AdoptionMetricsAggregator struct {
-	identityProviders   *prometheus.GaugeVec
-	clusterAdmin        prometheus.Gauge
-	providerMap         map[providerKey][]configv1.IdentityProviderType
-	clusterProxy        *prometheus.GaugeVec
-	mutex               sync.Mutex
-	aggregationInterval time.Duration
+	identityProviders    *prometheus.GaugeVec
+	clusterAdmin         prometheus.Gauge
+	providerMap          map[providerKey][]configv1.IdentityProviderType
+	clusterProxy         *prometheus.GaugeVec
+	clusterProxyCAExpiry *prometheus.GaugeVec
+	clusterProxyCAValid  prometheus.Gauge
+	mutex                sync.Mutex
+	aggregationInterval  time.Duration
 }
 
 // NewMetricsAggregator creates a metric aggregator. Should not be used directory but through GetMetricsAggregator
@@ -60,6 +63,16 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 			Help:        "Indicates cluster proxy state",
 			ConstLabels: map[string]string{"name": osdExporterValue},
 		}, []string{proxyHTTPLabel, proxyHTTPSLabel, proxyCALabel}),
+		clusterProxyCAExpiry: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name:        "cluster_proxy_ca_expiry_timestamp",
+			Help:        "Indicates cluster proxy CA expiry unix timestamp in UTC",
+			ConstLabels: map[string]string{"name": osdExporterValue},
+		}, []string{proxyCASubjectLabel}),
+		clusterProxyCAValid: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name:        "cluster_proxy_ca_valid",
+			Help:        "Indicates if cluster proxy CA valid",
+			ConstLabels: map[string]string{"name": osdExporterValue},
+		}),
 		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
 	}
@@ -137,8 +150,22 @@ func (a *AdoptionMetricsAggregator) SetClusterProxy(proxyHTTP string, proxyHTTPS
 	}).Set(float64(proxyEnabled))
 }
 
+func (a *AdoptionMetricsAggregator) SetClusterProxyCAExpiry(subject string, clusterProxyCAExpiry int64) {
+	a.clusterProxyCAExpiry.With(prometheus.Labels{
+		proxyCASubjectLabel: subject,
+	}).Set(float64(clusterProxyCAExpiry))
+}
+
+func (a *AdoptionMetricsAggregator) SetClusterProxyCAValid(valid bool) {
+	if valid {
+		a.clusterProxyCAValid.Set(1)
+	} else {
+		a.clusterProxyCAValid.Set(0)
+	}
+}
+
 func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
-	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.clusterProxy}
+	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.clusterProxy, a.clusterProxyCAExpiry, a.clusterProxyCAValid}
 }
 
 func (a *AdoptionMetricsAggregator) GetClusterRoleMetric() prometheus.Gauge {
@@ -151,4 +178,12 @@ func (a *AdoptionMetricsAggregator) GetIdentityProviderMetric() *prometheus.Gaug
 
 func (a *AdoptionMetricsAggregator) GetClusterProxyMetric() *prometheus.GaugeVec {
 	return a.clusterProxy
+}
+
+func (a *AdoptionMetricsAggregator) GetClusterProxyCAExpiryMetrics() *prometheus.GaugeVec {
+	return a.clusterProxyCAExpiry
+}
+
+func (a *AdoptionMetricsAggregator) GetClusterProxyCAValidMetrics() prometheus.Gauge {
+	return a.clusterProxyCAValid
 }
