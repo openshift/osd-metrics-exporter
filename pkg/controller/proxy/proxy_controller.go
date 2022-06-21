@@ -2,6 +2,8 @@ package proxy
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	openshiftapi "github.com/openshift/api/config/v1"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
@@ -17,6 +19,8 @@ import (
 )
 
 var log = logf.Log.WithName("controller_proxy")
+
+const EnvClusterID = "CLUSTER_ID"
 
 // Add creates a new Proxy Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -71,6 +75,12 @@ type ReconcileProxy struct {
 func (r *ReconcileProxy) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Proxy")
+
+	uuid := os.Getenv(EnvClusterID)
+	if uuid == "" {
+		return reconcile.Result{}, fmt.Errorf("Cluster ID returned as empty string")
+	}
+	r.metricsAggregator.SetClusterID(uuid)
 
 	// Fetch the Proxy instance
 	instance := &openshiftapi.Proxy{}

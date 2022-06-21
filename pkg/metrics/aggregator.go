@@ -15,6 +15,7 @@ const (
 	proxyHTTPSLabel     = "https"
 	proxyCALabel        = "trusted_ca"
 	proxyCASubjectLabel = "subject"
+	clusterIDLabel      = "_id"
 )
 
 var knownIdentityProviderTypes = []configv1.IdentityProviderType{
@@ -41,6 +42,7 @@ type AdoptionMetricsAggregator struct {
 	clusterProxy         *prometheus.GaugeVec
 	clusterProxyCAExpiry *prometheus.GaugeVec
 	clusterProxyCAValid  prometheus.Gauge
+	clusterID            *prometheus.GaugeVec
 	mutex                sync.Mutex
 	aggregationInterval  time.Duration
 }
@@ -73,6 +75,11 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 			Help:        "Indicates if cluster proxy CA valid",
 			ConstLabels: map[string]string{"name": osdExporterValue},
 		}),
+		clusterID: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name:        "cluster_id",
+			Help:        "Indicates the cluster id",
+			ConstLabels: map[string]string{"name": osdExporterValue},
+		}, []string{clusterIDLabel}),
 		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
 	}
@@ -164,8 +171,14 @@ func (a *AdoptionMetricsAggregator) SetClusterProxyCAValid(valid bool) {
 	}
 }
 
+func (a *AdoptionMetricsAggregator) SetClusterID(uuid string) {
+	a.clusterID.With(prometheus.Labels{
+		clusterIDLabel: uuid,
+	}).Set(1)
+}
+
 func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
-	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.clusterProxy, a.clusterProxyCAExpiry, a.clusterProxyCAValid}
+	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.clusterProxy, a.clusterProxyCAExpiry, a.clusterProxyCAValid, a.clusterID}
 }
 
 func (a *AdoptionMetricsAggregator) GetClusterRoleMetric() prometheus.Gauge {
@@ -178,6 +191,10 @@ func (a *AdoptionMetricsAggregator) GetIdentityProviderMetric() *prometheus.Gaug
 
 func (a *AdoptionMetricsAggregator) GetClusterProxyMetric() *prometheus.GaugeVec {
 	return a.clusterProxy
+}
+
+func (a *AdoptionMetricsAggregator) GetClusterIDMetric() *prometheus.GaugeVec {
+	return a.clusterID
 }
 
 func (a *AdoptionMetricsAggregator) GetClusterProxyCAExpiryMetrics() *prometheus.GaugeVec {
