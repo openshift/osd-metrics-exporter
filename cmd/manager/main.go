@@ -14,6 +14,7 @@ import (
 	operatorConfig "github.com/openshift/osd-metrics-exporter/config"
 	"github.com/openshift/osd-metrics-exporter/pkg/apis"
 	"github.com/openshift/osd-metrics-exporter/pkg/controller"
+	"github.com/openshift/osd-metrics-exporter/pkg/controller/proxy"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	"github.com/openshift/osd-metrics-exporter/version"
 
@@ -28,8 +29,10 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -168,10 +171,35 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup KubeClient
+	kubeClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		log.Error(err, "Failed to create a kubernetes client")
+		os.Exit(1)
+	}
+
+	err = exportClusterID(kubeClient)
+	log.Info("Exporting ClusterID to container env")
+	if err != nil {
+		log.Error(err, "Failed to retrieve and export ClusterID")
+		os.Exit(1)
+	}
+
 	log.Info("Starting the Cmd.")
 	// Start the Cmd
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
+}
+
+func exportClusterID(client client.Client) error {
+	cv := &configv1.ClusterVersion{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return err
+	}
+	id := cv.Spec.ClusterID
+	os.Setenv(proxy.EnvClusterID, string(id))
+	return nil
 }

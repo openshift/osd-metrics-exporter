@@ -3,9 +3,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: osd-metrics-exporter
 subjects:
-- kind: ServiceAccount
-  name: osd-metrics-exporter
-  namespace: osd-adoption-exporter-metrics
+  - kind: ServiceAccount
+    name: osd-metrics-exporter
+    namespace: openshift-osd-metrics
 roleRef:
   kind: ClusterRole
   name: osd-metrics-exporter

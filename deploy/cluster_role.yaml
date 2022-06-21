@@ -17,6 +17,7 @@ rules:
   - config.openshift.io
   resources:
   - proxies
+  - clusterversions
   verbs:
   - get
   - list
