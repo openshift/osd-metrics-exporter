@@ -107,6 +107,8 @@ objects:
       metadata:
         name: osd-metrics-exporter
         namespace: openshift-osd-metrics
+        annotations:
+          olm.operatorframework.io/exclude-global-namespace-resolution: 'true'
       spec:
         targetNamespaces:
         - openshift-osd-metrics
