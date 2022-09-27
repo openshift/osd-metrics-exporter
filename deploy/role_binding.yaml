@@ -1,0 +1,14 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: osd-metrics-exporter
+  namespace: openshift-osd-metrics
+subjects:
+  - kind: ServiceAccount
+    name: osd-metrics-exporter
+    namespace: openshift-osd-metrics
+roleRef:
+  kind: Role
+  name: osd-metrics-exporter
+  namespace: openshift-osd-metrics
+  apiGroup: rbac.authorization.k8s.io

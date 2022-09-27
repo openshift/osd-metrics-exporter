@@ -10,8 +10,6 @@ rules:
   verbs:
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - config.openshift.io
@@ -21,7 +19,7 @@ rules:
   verbs:
   - get
   - list
-  - watch  
+  - watch
 - apiGroups:
     - rbac.authorization.k8s.io
   resources:
@@ -29,16 +27,12 @@ rules:
   verbs:
     - get
     - list
-    - patch
-    - update
     - watch
 - apiGroups:
     - rbac.authorization.k8s.io
   resources:
     - clusterroles/finalizers
   verbs:
-    - create
-    - patch
     - update
 - apiGroups:
     - user.openshift.io
@@ -47,28 +41,13 @@ rules:
   verbs:
     - get
     - list
-    - patch
-    - update
     - watch
 - apiGroups:
     - user.openshift.io
   resources:
     - groups/finalizers
   verbs:
-    - create
-    - patch
     - update
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  - services
-  - endpoints
-  - events
-  - configmaps
-  - secrets
-  verbs:
-  - '*'
 - apiGroups:
   - ""
   resources:
@@ -76,17 +55,10 @@ rules:
   verbs:
   - get
 - apiGroups:
-  - apps
+  - ""
   resources:
-  - deployments
-  - daemonsets
-  verbs:
-  - '*'
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - servicemonitors
+  - configmaps
   verbs:
   - get
-  - create
-  - update
+  - list
+  - watch
