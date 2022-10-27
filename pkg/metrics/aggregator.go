@@ -38,6 +38,7 @@ type providerKey struct {
 type AdoptionMetricsAggregator struct {
 	identityProviders    *prometheus.GaugeVec
 	clusterAdmin         prometheus.Gauge
+	limitedSupport       prometheus.Gauge
 	providerMap          map[providerKey][]configv1.IdentityProviderType
 	clusterProxy         *prometheus.GaugeVec
 	clusterProxyCAExpiry *prometheus.GaugeVec
@@ -58,6 +59,11 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 		clusterAdmin: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name:        "cluster_admin_enabled",
 			Help:        "Indicates if the cluster-admin role is enabled",
+			ConstLabels: map[string]string{"name": osdExporterValue},
+		}),
+		limitedSupport: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name:        "limited_support_enabled",
+			Help:        "Indicates if limited support is enabled",
 			ConstLabels: map[string]string{"name": osdExporterValue},
 		}),
 		clusterProxy: prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -84,6 +90,7 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 		aggregationInterval: aggregationInterval,
 	}
 	collector.clusterAdmin.Set(0)
+	collector.limitedSupport.Set(0)
 	return collector
 }
 
@@ -149,6 +156,14 @@ func (a *AdoptionMetricsAggregator) SetClusterAdmin(enabled bool) {
 	}
 }
 
+func (a *AdoptionMetricsAggregator) SetLimitedSupport(enabled bool) {
+	if enabled {
+		a.limitedSupport.Set(1)
+	} else {
+		a.limitedSupport.Set(0)
+	}
+}
+
 func (a *AdoptionMetricsAggregator) SetClusterProxy(proxyHTTP string, proxyHTTPS string, proxyTrustedCA string, proxyEnabled int) {
 	a.clusterProxy.With(prometheus.Labels{
 		proxyHTTPLabel:  proxyHTTP,
@@ -178,11 +193,15 @@ func (a *AdoptionMetricsAggregator) SetClusterID(uuid string) {
 }
 
 func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
-	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.clusterProxy, a.clusterProxyCAExpiry, a.clusterProxyCAValid, a.clusterID}
+	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.limitedSupport, a.clusterProxy, a.clusterProxyCAExpiry, a.clusterProxyCAValid, a.clusterID}
 }
 
 func (a *AdoptionMetricsAggregator) GetClusterRoleMetric() prometheus.Gauge {
 	return a.clusterAdmin
+}
+
+func (a *AdoptionMetricsAggregator) GetLimitedsupportStatus() prometheus.Gauge {
+	return a.limitedSupport
 }
 
 func (a *AdoptionMetricsAggregator) GetIdentityProviderMetric() *prometheus.GaugeVec {
