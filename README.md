@@ -6,6 +6,11 @@ A prometheus exporter to expose metrics about various features used in Openshift
 
 1. Identity Provider
 2. Cluster Admin
+3. Limited Support
+4. Cluster Proxy
+5. Cluster Proxy CA Expiry Timestamp
+6. Cluster Proxy CA Valid
+7. Cluster ID
 
 # Local development without OLM
 
