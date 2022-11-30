@@ -13,8 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func makeTestConfigMap(name string, namespace string) *corev1.ConfigMap {
@@ -46,12 +46,12 @@ limited_support_enabled{name="osd_exporter"} 1
 			require.NoError(t, err)
 
 			testConfigMap := makeTestConfigMap(limitedSupportConfigMapName, limitedSupportConfigMapNamespace)
-			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, testConfigMap)
-			reconciler := ReconcileLimitedSupportConfigMap{
-				client:            fakeClient,
-				metricsAggregator: metricsAggregator,
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(testConfigMap).Build()
+			reconciler := LimitedSupportConfigMapReconciler{
+				Client:            fakeClient,
+				MetricsAggregator: metricsAggregator,
 			}
-			result, err := reconciler.Reconcile(reconcile.Request{
+			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: limitedSupportConfigMapNamespace,
 					Name:      limitedSupportConfigMapName,
@@ -92,12 +92,12 @@ limited_support_enabled{name="osd_exporter"} 0
 			require.NoError(t, err)
 
 			testConfigMap := makeTestConfigMap(limitedSupportConfigMapName, "default")
-			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, testConfigMap)
-			reconciler := ReconcileLimitedSupportConfigMap{
-				client:            fakeClient,
-				metricsAggregator: metricsAggregator,
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(testConfigMap).Build()
+			reconciler := LimitedSupportConfigMapReconciler{
+				Client:            fakeClient,
+				MetricsAggregator: metricsAggregator,
 			}
-			result, err := reconciler.Reconcile(reconcile.Request{
+			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "default",
 					Name:      limitedSupportConfigMapName,
