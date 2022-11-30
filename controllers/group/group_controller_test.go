@@ -12,17 +12,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func TestReconcileGroup_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
-		name        string
-		users       []string
-		result      int
-		delete      bool
+		name   string
+		users  []string
+		result int
+		delete bool
 	}{
 		{
 			name:   "empty cluster-admins group",
@@ -51,13 +51,12 @@ func TestReconcileGroup_Reconcile(t *testing.T) {
 				now := metav1.Now()
 				group.DeletionTimestamp = &now
 			}
-			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, group)
-			reconcileGroup := &ReconcileGroup{
-				client:            fakeClient,
-				scheme:            scheme.Scheme,
-				metricsAggregator: metrics.NewMetricsAggregator(time.Second * 10),
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(group).Build()
+			reconcileGroup := &GroupReconciler{
+				Client:            fakeClient,
+				MetricsAggregator: metrics.NewMetricsAggregator(time.Second * 10),
 			}
-			_, err = reconcileGroup.Reconcile(reconcile.Request{
+			_, err = reconcileGroup.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{Name: clusterAdminGroupName},
 			})
 			require.NoError(t, err)
@@ -68,7 +67,7 @@ func TestReconcileGroup_Reconcile(t *testing.T) {
 			} else {
 				require.Contains(t, group.Finalizers, finalizer)
 			}
-			metric := reconcileGroup.metricsAggregator.GetClusterRoleMetric()
+			metric := reconcileGroup.MetricsAggregator.GetClusterRoleMetric()
 			value := testutil.ToFloat64(metric)
 			require.EqualValues(t, tc.result, value)
 		})

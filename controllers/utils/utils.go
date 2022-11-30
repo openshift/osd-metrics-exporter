@@ -11,9 +11,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package utils
 
-const (
-	OperatorName      = "osd-metrics-exporter"
-	OperatorNamespace = "openshift-osd-metrics"
-)
+func ContainsString(stringArray []string, candidate string) bool {
+	for _, s := range stringArray {
+		if s == candidate {
+			return true
+		}
+	}
+	return false
+}
