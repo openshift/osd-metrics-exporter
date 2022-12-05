@@ -1,3 +1,16 @@
+/*
+Copyright 2022.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package oauth
 
 import (
@@ -8,15 +21,15 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 
-	openshiftapi "github.com/openshift/api/config/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -25,14 +38,14 @@ const (
 	testNamespace = "test"
 )
 
-func makeTestOAuth(name, namespace string, providers ...openshiftapi.IdentityProviderType) *openshiftapi.OAuth {
-	oauth := &openshiftapi.OAuth{
+func makeTestOAuth(name, namespace string, providers ...configv1.IdentityProviderType) *configv1.OAuth {
+	oauth := &configv1.OAuth{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-		Spec:       openshiftapi.OAuthSpec{},
+		Spec:       configv1.OAuthSpec{},
 	}
 	for _, p := range providers {
-		oauth.Spec.IdentityProviders = append(oauth.Spec.IdentityProviders, openshiftapi.IdentityProvider{
-			IdentityProviderConfig: openshiftapi.IdentityProviderConfig{
+		oauth.Spec.IdentityProviders = append(oauth.Spec.IdentityProviders, configv1.IdentityProvider{
+			IdentityProviderConfig: configv1.IdentityProviderConfig{
 				Type: p,
 			},
 		})
@@ -42,37 +55,37 @@ func makeTestOAuth(name, namespace string, providers ...openshiftapi.IdentityPro
 func TestReconcileOAuth_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
 		name              string
-		providers         []openshiftapi.IdentityProviderType
-		existingProviders []openshiftapi.IdentityProviderType
-		expectedResult    map[openshiftapi.IdentityProviderType]int
+		providers         []configv1.IdentityProviderType
+		existingProviders []configv1.IdentityProviderType
+		expectedResult    map[configv1.IdentityProviderType]int
 	}{
 		{
 			name: "basic",
-			providers: []openshiftapi.IdentityProviderType{
-				openshiftapi.IdentityProviderTypeGoogle,
-				openshiftapi.IdentityProviderTypeGitHub,
-				openshiftapi.IdentityProviderTypeLDAP,
+			providers: []configv1.IdentityProviderType{
+				configv1.IdentityProviderTypeGoogle,
+				configv1.IdentityProviderTypeGitHub,
+				configv1.IdentityProviderTypeLDAP,
 			},
-			expectedResult: map[openshiftapi.IdentityProviderType]int{
-				openshiftapi.IdentityProviderTypeGoogle: 1,
-				openshiftapi.IdentityProviderTypeGitHub: 1,
-				openshiftapi.IdentityProviderTypeLDAP:   1,
+			expectedResult: map[configv1.IdentityProviderType]int{
+				configv1.IdentityProviderTypeGoogle: 1,
+				configv1.IdentityProviderTypeGitHub: 1,
+				configv1.IdentityProviderTypeLDAP:   1,
 			},
 		},
 		{
 			name: "provider removed",
-			providers: []openshiftapi.IdentityProviderType{
-				openshiftapi.IdentityProviderTypeGoogle,
-				openshiftapi.IdentityProviderTypeGitHub,
+			providers: []configv1.IdentityProviderType{
+				configv1.IdentityProviderTypeGoogle,
+				configv1.IdentityProviderTypeGitHub,
 			},
-			existingProviders: []openshiftapi.IdentityProviderType{
-				openshiftapi.IdentityProviderTypeBasicAuth,
-				openshiftapi.IdentityProviderTypeGoogle,
+			existingProviders: []configv1.IdentityProviderType{
+				configv1.IdentityProviderTypeBasicAuth,
+				configv1.IdentityProviderTypeGoogle,
 			},
-			expectedResult: map[openshiftapi.IdentityProviderType]int{
-				openshiftapi.IdentityProviderTypeGoogle:    1,
-				openshiftapi.IdentityProviderTypeGitHub:    1,
-				openshiftapi.IdentityProviderTypeBasicAuth: 0,
+			expectedResult: map[configv1.IdentityProviderType]int{
+				configv1.IdentityProviderTypeGoogle:    1,
+				configv1.IdentityProviderTypeGitHub:    1,
+				configv1.IdentityProviderTypeBasicAuth: 0,
 			},
 		},
 	} {
@@ -80,22 +93,22 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
 			done := metricsAggregator.Run()
 			defer close(done)
-			err := openshiftapi.Install(scheme.Scheme)
+			err := configv1.Install(scheme.Scheme)
 			require.NoError(t, err)
 			if tc.existingProviders == nil {
-				tc.existingProviders = make([]openshiftapi.IdentityProviderType, 0)
+				tc.existingProviders = make([]configv1.IdentityProviderType, 0)
 			}
 
 			// Create OAuth Provider
 			// Initially create OAuth provider with or without Identity providers depending on test case
 			testOAuthCR := makeTestOAuth(testName, testNamespace, tc.existingProviders...)
-			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, testOAuthCR)
-			reconciler := ReconcileOAuth{
-				client:            fakeClient,
-				metricsAggregator: metricsAggregator,
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(testOAuthCR).Build()
+			reconciler := OAuthReconciler{
+				Client:            fakeClient,
+				MetricsAggregator: metricsAggregator,
 			}
 
-			_, err = reconciler.Reconcile(reconcile.Request{
+			_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: testNamespace,
 					Name:      testName,
@@ -105,7 +118,7 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 			// Reconcile shouldn't trigger any changes
 			require.NoError(t, err)
 
-			var testOAuthCRAPI = &openshiftapi.OAuth{}
+			var testOAuthCRAPI = &configv1.OAuth{}
 
 			// After reconcile the CR metadata will change so Get it from the API, ensure the spec is still as we expect
 			err = fakeClient.Get(context.TODO(), types.NamespacedName{Name: testName, Namespace: testNamespace}, testOAuthCRAPI)
@@ -122,7 +135,7 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 			err = fakeClient.Update(context.Background(), testOAuthCRAPI)
 			require.NoError(t, err)
 
-			result, err := reconciler.Reconcile(reconcile.Request{
+			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: testNamespace,
 					Name:      testName,
@@ -134,7 +147,7 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 			time.Sleep(time.Second * 3)
 			require.NoError(t, err)
 			require.NotNil(t, result)
-			var testOAuth openshiftapi.OAuth
+			var testOAuth configv1.OAuth
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: testName, Namespace: testNamespace}, &testOAuth)
 			require.NoError(t, err)
 			require.Contains(t, testOAuth.ObjectMeta.Finalizers, finalizer)
@@ -143,7 +156,6 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 				val := testutil.ToFloat64(metric.With(prometheus.Labels{providerLabel: string(p)}))
 				require.EqualValues(t, v, val, "provider label: %s", string(p))
 			}
-
 		})
 	}
 }

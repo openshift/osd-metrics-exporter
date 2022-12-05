@@ -1,3 +1,16 @@
+/*
+Copyright 2022.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package configmap
 
 import (
@@ -14,8 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -100,12 +113,12 @@ cluster_proxy_ca_expiry_timestamp{name="osd_exporter",subject="O=Default Company
 			require.NoError(t, err)
 
 			testConfigMap := makeTestConfigMap(userCABundle, openshiftConfig, tc.cfgMapData)
-			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, testConfigMap)
-			reconciler := ReconcileConfigMap{
-				client:            fakeClient,
-				metricsAggregator: metricsAggregator,
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(testConfigMap).Build()
+			reconciler := ConfigMapReconciler{
+				Client:            fakeClient,
+				MetricsAggregator: metricsAggregator,
 			}
-			result, err := reconciler.Reconcile(reconcile.Request{
+			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: openshiftConfig,
 					Name:      userCABundle,
@@ -148,12 +161,12 @@ cluster_proxy_ca_valid{name="osd_exporter"} 0
 			require.NoError(t, err)
 
 			testConfigMap := makeTestConfigMap(userCABundle, openshiftConfig, tc.cfgMapData)
-			fakeClient := fake.NewFakeClientWithScheme(scheme.Scheme, testConfigMap)
-			reconciler := ReconcileConfigMap{
-				client:            fakeClient,
-				metricsAggregator: metricsAggregator,
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(testConfigMap).Build()
+			reconciler := ConfigMapReconciler{
+				Client:            fakeClient,
+				MetricsAggregator: metricsAggregator,
 			}
-			result, err := reconciler.Reconcile(reconcile.Request{
+			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: openshiftConfig,
 					Name:      userCABundle,
