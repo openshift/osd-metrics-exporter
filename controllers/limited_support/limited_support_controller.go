@@ -16,6 +16,7 @@ package limited_support
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +35,8 @@ const (
 	limitedSupportConfigMapNamespace = "openshift-osd-metrics"
 )
 
+const EnvClusterID = "CLUSTER_ID"
+
 var log = logf.Log.WithName("controller_limited_support")
 
 // LimitedSupportConfigMapReconciler reconciles a ConfigMap object
@@ -47,6 +50,12 @@ type LimitedSupportConfigMapReconciler struct {
 func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling Limited Support ConfigMap")
+
+	uuid := os.Getenv(EnvClusterID)
+	if uuid == "" {
+		return ctrl.Result{}, fmt.Errorf("cluster ID returned as empty string")
+	}
+	r.MetricsAggregator.SetClusterID(uuid)
 
 	// Fetch the ConfigMap openshift-osd-metrics/limited-support
 	cfgMap := &corev1.ConfigMap{}

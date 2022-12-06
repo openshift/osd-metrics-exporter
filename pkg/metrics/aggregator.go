@@ -9,13 +9,14 @@ import (
 )
 
 const (
-	providerLabel       = "provider"
-	osdExporterValue    = "osd_exporter"
-	proxyHTTPLabel      = "http"
-	proxyHTTPSLabel     = "https"
-	proxyCALabel        = "trusted_ca"
-	proxyCASubjectLabel = "subject"
-	clusterIDLabel      = "_id"
+	providerLabel         = "provider"
+	osdExporterValue      = "osd_exporter"
+	proxyHTTPLabel        = "http"
+	proxyHTTPSLabel       = "https"
+	proxyCALabel          = "trusted_ca"
+	proxyCASubjectLabel   = "subject"
+	clusterIDLabel        = "_id"
+	limitedSupportEnabled = "limited_support_enabled"
 )
 
 var knownIdentityProviderTypes = []configv1.IdentityProviderType{
@@ -38,7 +39,7 @@ type providerKey struct {
 type AdoptionMetricsAggregator struct {
 	identityProviders    *prometheus.GaugeVec
 	clusterAdmin         prometheus.Gauge
-	limitedSupport       prometheus.Gauge
+	limitedSupport       *prometheus.GaugeVec
 	providerMap          map[providerKey][]configv1.IdentityProviderType
 	clusterProxy         *prometheus.GaugeVec
 	clusterProxyCAExpiry *prometheus.GaugeVec
@@ -61,11 +62,11 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 			Help:        "Indicates if the cluster-admin role is enabled",
 			ConstLabels: map[string]string{"name": osdExporterValue},
 		}),
-		limitedSupport: prometheus.NewGauge(prometheus.GaugeOpts{
+		limitedSupport: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name:        "limited_support_enabled",
 			Help:        "Indicates if limited support is enabled",
 			ConstLabels: map[string]string{"name": osdExporterValue},
-		}),
+		}, []string{clusterIDLabel}),
 		clusterProxy: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name:        "cluster_proxy",
 			Help:        "Indicates cluster proxy state",
@@ -90,7 +91,7 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 		aggregationInterval: aggregationInterval,
 	}
 	collector.clusterAdmin.Set(0)
-	collector.limitedSupport.Set(0)
+	//collector.limitedSupport.Set(0)
 	return collector
 }
 
@@ -156,11 +157,17 @@ func (a *AdoptionMetricsAggregator) SetClusterAdmin(enabled bool) {
 	}
 }
 
-func (a *AdoptionMetricsAggregator) SetLimitedSupport(enabled bool) {
-	if enabled {
-		a.limitedSupport.Set(1)
+func (a *AdoptionMetricsAggregator) SetLimitedSupport(uuid string, enabled float64) {
+        labels := prometheus.Labels{
+			clusterIDLabel: uuid,
+		}
+
+	if enabled == 1 {
+		a.limitedSupport.With(labels).Set(1)
+
 	} else {
-		a.limitedSupport.Set(0)
+		a.limitedSupport.With(labels).Set(0)
+
 	}
 }
 
@@ -200,7 +207,7 @@ func (a *AdoptionMetricsAggregator) GetClusterRoleMetric() prometheus.Gauge {
 	return a.clusterAdmin
 }
 
-func (a *AdoptionMetricsAggregator) GetLimitedsupportStatus() prometheus.Gauge {
+func (a *AdoptionMetricsAggregator) GetLimitedsupportStatus() *prometheus.GaugeVec {
 	return a.limitedSupport
 }
 
