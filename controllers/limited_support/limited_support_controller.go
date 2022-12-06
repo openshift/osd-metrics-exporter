@@ -54,7 +54,7 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 	// Fetch the ConfigMap openshift-osd-metrics/limited-support
 	uuid, ok := os.LookupEnv(EnvClusterID)
 	if !ok || uuid == "" {
-	  return reconcile.Result{}, fmt.Errorf("cluster ID unset or returned as empty string")
+		return ctrl.Result{}, fmt.Errorf("cluster ID unset or returned as empty string")
 	}
 	cfgMap := &corev1.ConfigMap{}
 	ns := limitedSupportConfigMapNamespace
@@ -71,7 +71,6 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
-
 	reqLogger.Info(fmt.Sprintf("Found ConfigMap %v", limitedSupportConfigMapName))
 	r.MetricsAggregator.SetLimitedSupport(uuid, true)
 	return ctrl.Result{}, nil
