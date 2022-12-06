@@ -67,7 +67,7 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			reqLogger.Info(fmt.Sprintf("Did not find ConfigMap %v", limitedSupportConfigMapName))
-			r.MetricsAggregator.SetLimitedSupport(false)
+			r.MetricsAggregator.SetLimitedSupport(uuid, 0)
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -75,7 +75,7 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 	}
 
 	reqLogger.Info(fmt.Sprintf("Found ConfigMap %v", limitedSupportConfigMapName))
-	r.MetricsAggregator.SetLimitedSupport(true)
+	r.MetricsAggregator.SetLimitedSupport(uuid, 1)
 	return ctrl.Result{}, nil
 }
 
