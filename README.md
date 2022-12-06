@@ -6,6 +6,11 @@ A prometheus exporter to expose metrics about various features used in Openshift
 
 1. Identity Provider
 2. Cluster Admin
+3. Limited Support
+4. Cluster Proxy
+5. Cluster Proxy CA Expiry Timestamp
+6. Cluster Proxy CA Valid
+7. Cluster ID
 
 # Local development without OLM
 
@@ -26,17 +31,17 @@ $ oc -n openshift-osd-metrics create -f deploy/service_account.yaml
 serviceaccount/osd-metrics-exporter created
 ```
 
-3. Requires operator-sdk < 1.X
+3. Requires operator-sdk >= 1.X
 
 ```
 $ operator-sdk version
-operator-sdk version: "v0.17.2", commit: "0258db0119e8e18e15d035532427c329fce1e871", kubernetes version: "v1.17.2", go version: "go1.18.2 linux/amd64"
+operator-sdk version: "v1.25.2", commit: "b63b921837de8dd6ce480033e427ecfc5e34abcc", kubernetes version: "v1.25.0", go version: "go1.19.3", GOOS: "darwin", GOARCH: "arm64"
 ```
 
 4. Optionally authenticate as the `serviceaccount`.
 
 ```
-$ oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') --token $(oc -n openshift-osd-metrics serviceaccounts get-token osd-metrics-exporter)
+$ oc login "$(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL')" --token "$(oc create token -n openshift-osd-metrics osd-metrics-exporter --as backplane-cluster-admin)"
 ```
 
 5. Switch to project
