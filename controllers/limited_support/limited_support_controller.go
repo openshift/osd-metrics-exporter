@@ -51,13 +51,8 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling Limited Support ConfigMap")
 
-	uuid := os.Getenv(EnvClusterID)
-	if uuid == "" {
-		return ctrl.Result{}, fmt.Errorf("cluster ID returned as empty string")
-	}
-	r.MetricsAggregator.SetClusterID(uuid)
-
 	// Fetch the ConfigMap openshift-osd-metrics/limited-support
+	uuid := os.Getenv(EnvClusterID)
 	cfgMap := &corev1.ConfigMap{}
 	ns := limitedSupportConfigMapNamespace
 	err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: limitedSupportConfigMapName}, cfgMap)
@@ -67,7 +62,7 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			reqLogger.Info(fmt.Sprintf("Did not find ConfigMap %v", limitedSupportConfigMapName))
-			r.MetricsAggregator.SetLimitedSupport(uuid, 0)
+			r.MetricsAggregator.SetLimitedSupport(uuid, false)
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -75,7 +70,7 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 	}
 
 	reqLogger.Info(fmt.Sprintf("Found ConfigMap %v", limitedSupportConfigMapName))
-	r.MetricsAggregator.SetLimitedSupport(uuid, 1)
+	r.MetricsAggregator.SetLimitedSupport(uuid, true)
 	return ctrl.Result{}, nil
 }
 

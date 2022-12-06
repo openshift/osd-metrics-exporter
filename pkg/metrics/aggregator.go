@@ -91,7 +91,6 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 		aggregationInterval: aggregationInterval,
 	}
 	collector.clusterAdmin.Set(0)
-	//collector.limitedSupport.Set(0)
 	return collector
 }
 
@@ -157,12 +156,12 @@ func (a *AdoptionMetricsAggregator) SetClusterAdmin(enabled bool) {
 	}
 }
 
-func (a *AdoptionMetricsAggregator) SetLimitedSupport(uuid string, enabled float64) {
-        labels := prometheus.Labels{
-			clusterIDLabel: uuid,
-		}
+func (a *AdoptionMetricsAggregator) SetLimitedSupport(uuid string, enabled bool) {
+	labels := prometheus.Labels{
+		clusterIDLabel: uuid,
+	}
 
-	if enabled == 1 {
+	if enabled {
 		a.limitedSupport.With(labels).Set(1)
 
 	} else {
