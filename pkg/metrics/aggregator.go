@@ -9,14 +9,13 @@ import (
 )
 
 const (
-	providerLabel         = "provider"
-	osdExporterValue      = "osd_exporter"
-	proxyHTTPLabel        = "http"
-	proxyHTTPSLabel       = "https"
-	proxyCALabel          = "trusted_ca"
-	proxyCASubjectLabel   = "subject"
-	clusterIDLabel        = "_id"
-	limitedSupportEnabled = "limited_support_enabled"
+	providerLabel       = "provider"
+	osdExporterValue    = "osd_exporter"
+	proxyHTTPLabel      = "http"
+	proxyHTTPSLabel     = "https"
+	proxyCALabel        = "trusted_ca"
+	proxyCASubjectLabel = "subject"
+	clusterIDLabel      = "_id"
 )
 
 var knownIdentityProviderTypes = []configv1.IdentityProviderType{
