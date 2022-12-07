@@ -128,7 +128,7 @@ func main() {
 		Scheme:            mgr.GetScheme(),
 		MetricsAggregator: metrics.GetMetricsAggregator(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Group")
+		setupLog.Error(err, "unable to create controller", "controller", "Limited Support")
 		os.Exit(1)
 	}
 
