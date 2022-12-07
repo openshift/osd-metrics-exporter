@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"os"
 	"sync"
 	"time"
 
@@ -90,7 +91,8 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 		aggregationInterval: aggregationInterval,
 	}
 	collector.clusterAdmin.Set(0)
-	collector.SetLimitedSupport(clusterIDLabel, false)
+	uuid := os.Getenv("CLUSTER_ID")
+	collector.SetLimitedSupport(uuid, false)
 	return collector
 }
 
