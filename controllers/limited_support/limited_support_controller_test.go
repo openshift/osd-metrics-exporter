@@ -2,7 +2,6 @@ package limited_support
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 	"time"
