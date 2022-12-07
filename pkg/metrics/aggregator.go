@@ -90,6 +90,7 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 		aggregationInterval: aggregationInterval,
 	}
 	collector.clusterAdmin.Set(0)
+	collector.SetLimitedSupport(clusterIDLabel, false)
 	return collector
 }
 
