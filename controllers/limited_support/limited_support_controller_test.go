@@ -91,7 +91,7 @@ limited_support_enabled{_id="i-am-a-cluster-id",name="osd_exporter"} 0
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			os.Setenv(EnvClusterID, tc.testEnvClusterID)
+			t.Setenv(EnvClusterID, tc.testEnvClusterID)
 			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
 			done := metricsAggregator.Run()
 			defer close(done)
