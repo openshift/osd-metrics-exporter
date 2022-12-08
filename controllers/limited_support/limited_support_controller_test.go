@@ -26,19 +26,22 @@ func makeTestConfigMap(name string, namespace string) *corev1.ConfigMap {
 
 func TestReconcileLimitedSupportConfigMap_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
-		name            string
-		expectedResults string
+		name             string
+		expectedResults  string
+		testEnvClusterID string
 	}{
 		{
-			name: "limited-support correct ConfigMap",
+			name:             "limited-support correct ConfigMap",
+			testEnvClusterID: "i-am-a-cluster-id",
 			expectedResults: `
 # HELP limited_support_enabled Indicates if limited support is enabled
 # TYPE limited_support_enabled gauge
-limited_support_enabled{name="osd_exporter"} 1
+limited_support_enabled{_id="i-am-a-cluster-id",name="osd_exporter"} 1
 `,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(EnvClusterID, tc.testEnvClusterID)
 			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
 			done := metricsAggregator.Run()
 			defer close(done)
@@ -72,19 +75,22 @@ limited_support_enabled{name="osd_exporter"} 1
 	}
 
 	for _, tc := range []struct {
-		name            string
-		expectedResults string
+		name             string
+		expectedResults  string
+		testEnvClusterID string
 	}{
 		{
-			name: "limited-support invalid configMap",
+			name:             "limited-support invalid configMap",
+			testEnvClusterID: "i-am-a-cluster-id",
 			expectedResults: `
 # HELP limited_support_enabled Indicates if limited support is enabled
 # TYPE limited_support_enabled gauge
-limited_support_enabled{name="osd_exporter"} 0
+limited_support_enabled{_id="i-am-a-cluster-id",name="osd_exporter"} 0
 `,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(EnvClusterID, tc.testEnvClusterID)
 			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
 			done := metricsAggregator.Run()
 			defer close(done)
