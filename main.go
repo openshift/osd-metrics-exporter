@@ -105,6 +105,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	setupLog.Info("exporting cluster id to container env")
+	err = exportClusterID(mgr.GetAPIReader())
+	if err != nil {
+		setupLog.Error(err, "Failed to retrieve and export ClusterID")
+		os.Exit(1)
+	}
+
 	if err = (&configmap.ConfigMapReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
@@ -171,13 +178,6 @@ func main() {
 		GetConfig()
 	if err = customMetrics.ConfigureMetrics(context.TODO(), *metricsConfig); err != nil {
 		setupLog.Error(err, "Failed to run metrics server")
-		os.Exit(1)
-	}
-
-	setupLog.Info("exporting cluster id to container env")
-	err = exportClusterID(mgr.GetAPIReader())
-	if err != nil {
-		setupLog.Error(err, "Failed to retrieve and export ClusterID")
 		os.Exit(1)
 	}
 
