@@ -26,13 +26,13 @@ func makeTestConfigMap(name string, namespace string) *corev1.ConfigMap {
 
 func TestReconcileLimitedSupportConfigMap_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
-		name             string
-		expectedResults  string
-		testEnvClusterID string
+		name            string
+		expectedResults string
+		clusterId       string
 	}{
 		{
-			name:             "limited-support correct ConfigMap",
-			testEnvClusterID: "i-am-a-cluster-id",
+			name:      "limited-support correct ConfigMap",
+			clusterId: "i-am-a-cluster-id",
 			expectedResults: `
 # HELP limited_support_enabled Indicates if limited support is enabled
 # TYPE limited_support_enabled gauge
@@ -41,8 +41,7 @@ limited_support_enabled{_id="i-am-a-cluster-id",name="osd_exporter"} 1
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(EnvClusterID, tc.testEnvClusterID)
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := corev1.AddToScheme(scheme.Scheme)
@@ -53,6 +52,7 @@ limited_support_enabled{_id="i-am-a-cluster-id",name="osd_exporter"} 1
 			reconciler := LimitedSupportConfigMapReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
+				ClusterId:         tc.clusterId,
 			}
 			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
@@ -75,13 +75,13 @@ limited_support_enabled{_id="i-am-a-cluster-id",name="osd_exporter"} 1
 	}
 
 	for _, tc := range []struct {
-		name             string
-		expectedResults  string
-		testEnvClusterID string
+		name            string
+		expectedResults string
+		clusterId       string
 	}{
 		{
-			name:             "limited-support invalid configMap",
-			testEnvClusterID: "i-am-a-cluster-id",
+			name:      "limited-support invalid configMap",
+			clusterId: "i-am-a-cluster-id",
 			expectedResults: `
 # HELP limited_support_enabled Indicates if limited support is enabled
 # TYPE limited_support_enabled gauge
@@ -90,8 +90,7 @@ limited_support_enabled{_id="i-am-a-cluster-id",name="osd_exporter"} 0
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(EnvClusterID, tc.testEnvClusterID)
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := corev1.AddToScheme(scheme.Scheme)
@@ -102,6 +101,7 @@ limited_support_enabled{_id="i-am-a-cluster-id",name="osd_exporter"} 0
 			reconciler := LimitedSupportConfigMapReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
+				ClusterId:         tc.clusterId,
 			}
 			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{

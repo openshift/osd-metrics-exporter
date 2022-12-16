@@ -15,7 +15,6 @@ package proxy
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -50,7 +49,7 @@ func TestReconcileProxy_Reconcile(t *testing.T) {
 		name                     string
 		proxyStatus              openshiftapi.ProxyStatus
 		proxySpec                openshiftapi.ProxySpec
-		testEnvClusterID         string
+		clusterId                string
 		expectedClusterIDResults string
 		expectedProxyResults     string
 	}{
@@ -65,7 +64,7 @@ func TestReconcileProxy_Reconcile(t *testing.T) {
 				HTTPProxy:  "http://example.com",
 				HTTPSProxy: "https://example.com",
 			},
-			testEnvClusterID: "i-am-a-cluster-id",
+			clusterId: "i-am-a-cluster-id",
 			expectedClusterIDResults: `
 # HELP cluster_id Indicates the cluster id
 # TYPE cluster_id gauge
@@ -84,7 +83,7 @@ cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="1"} 1
 				HTTPProxy:  "http://example.com",
 				HTTPSProxy: "https://example.com",
 			},
-			testEnvClusterID: "i-am-a-cluster-id",
+			clusterId: "i-am-a-cluster-id",
 			expectedClusterIDResults: `
 # HELP cluster_id Indicates the cluster id
 # TYPE cluster_id gauge
@@ -98,8 +97,7 @@ cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			os.Setenv(EnvClusterID, tc.testEnvClusterID)
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := openshiftapi.Install(scheme.Scheme)
@@ -109,6 +107,7 @@ cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
 			reconciler := ProxyReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
+				ClusterId:         tc.clusterId,
 			}
 			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
@@ -142,7 +141,7 @@ func TestReconcileProxy_ReconcileError(t *testing.T) {
 		name                     string
 		proxyStatus              openshiftapi.ProxyStatus
 		proxySpec                openshiftapi.ProxySpec
-		testEnvClusterID         string
+		clusterId                string
 		expectedClusterIDResults string
 		expectedProxyResults     string
 	}{
@@ -153,7 +152,7 @@ func TestReconcileProxy_ReconcileError(t *testing.T) {
 				HTTPProxy:  "http://example.com",
 				HTTPSProxy: "https://example.com",
 			},
-			testEnvClusterID: "",
+			clusterId: "",
 			expectedClusterIDResults: `
 # HELP cluster_id Indicates the cluster id
 # TYPE cluster_id gauge
@@ -167,8 +166,7 @@ cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			os.Setenv(EnvClusterID, tc.testEnvClusterID)
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := openshiftapi.Install(scheme.Scheme)
@@ -178,6 +176,7 @@ cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
 			reconciler := ProxyReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
+				ClusterId:         tc.clusterId,
 			}
 			_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
