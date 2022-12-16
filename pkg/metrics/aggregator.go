@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"os"
 	"sync"
 	"time"
 
@@ -50,7 +49,7 @@ type AdoptionMetricsAggregator struct {
 }
 
 // NewMetricsAggregator creates a metric aggregator. Should not be used directory but through GetMetricsAggregator
-func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAggregator {
+func NewMetricsAggregator(aggregationInterval time.Duration, clusterId string) *AdoptionMetricsAggregator {
 	collector := &AdoptionMetricsAggregator{
 		identityProviders: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name:        "identity_provider",
@@ -91,8 +90,7 @@ func NewMetricsAggregator(aggregationInterval time.Duration) *AdoptionMetricsAgg
 		aggregationInterval: aggregationInterval,
 	}
 	collector.clusterAdmin.Set(0)
-	uuid := os.Getenv("CLUSTER_ID")
-	collector.SetLimitedSupport(uuid, false)
+	collector.SetLimitedSupport(clusterId, false)
 	return collector
 }
 

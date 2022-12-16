@@ -102,18 +102,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	setupLog.Info("exporting cluster id to container env")
+	clusterId, err := getClusterID(mgr.GetAPIReader())
+	if err != nil {
+		setupLog.Error(err, "Failed to retrieve and export ClusterID")
+		os.Exit(1)
+	}
+
 	if err = (&clusterrole.ClusterRoleReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterRole")
-		os.Exit(1)
-	}
-
-	setupLog.Info("exporting cluster id to container env")
-	err = exportClusterID(mgr.GetAPIReader())
-	if err != nil {
-		setupLog.Error(err, "Failed to retrieve and export ClusterID")
 		os.Exit(1)
 	}
 
@@ -139,6 +139,7 @@ func main() {
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		MetricsAggregator: metrics.GetMetricsAggregator(),
+		ClusterId:         clusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Limited Support")
 		os.Exit(1)
@@ -157,6 +158,7 @@ func main() {
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		MetricsAggregator: metrics.GetMetricsAggregator(),
+		ClusterId:         clusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Proxy")
 		os.Exit(1)
@@ -193,13 +195,11 @@ func main() {
 	}
 }
 
-func exportClusterID(client client.Reader) error {
+func getClusterID(client client.Reader) (string, error) {
 	cv := &configv1.ClusterVersion{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
-	if err != nil {
-		return err
+	if err := client.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv); err != nil {
+		return "", err
 	}
-	id := cv.Spec.ClusterID
-	os.Setenv(proxy.EnvClusterID, string(id))
-	return nil
+
+	return string(cv.Spec.ClusterID), nil
 }
