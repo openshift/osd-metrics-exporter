@@ -36,6 +36,7 @@ type OAuthReconciler struct {
 	client.Client
 	Scheme            *runtime.Scheme
 	MetricsAggregator *metrics.AdoptionMetricsAggregator
+	ClusterId         string
 }
 
 // Reconcile reads that state of the cluster for a OAuth object and makes changes based on the state read
@@ -69,7 +70,7 @@ func (r *OAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 				return ctrl.Result{}, err
 			}
 		}
-		r.MetricsAggregator.SetOAuthIDP(instance.Name, instance.Namespace, instance.Spec.IdentityProviders)
+		r.MetricsAggregator.SetOAuthIDP(r.ClusterId, instance.Name, instance.Namespace, instance.Spec.IdentityProviders)
 	} else {
 		if utils.ContainsString(instance.ObjectMeta.Finalizers, finalizer) {
 			controllerutil.RemoveFinalizer(instance, finalizer)
@@ -77,7 +78,7 @@ func (r *OAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 				return ctrl.Result{}, err
 			}
 		}
-		r.MetricsAggregator.DeleteOAuthIDP(instance.Name, instance.Namespace)
+		r.MetricsAggregator.DeleteOAuthIDP(r.ClusterId, instance.Name, instance.Namespace)
 	}
 
 	return ctrl.Result{}, nil

@@ -4,6 +4,7 @@ import "time"
 
 const (
 	aggregatorResyncInterval = time.Minute
+	clusterId                = clusterIDLabel
 )
 
 var (
@@ -12,7 +13,7 @@ var (
 
 func GetMetricsAggregator() *AdoptionMetricsAggregator {
 	if aggregator == nil {
-		aggregator = NewMetricsAggregator(aggregatorResyncInterval)
+		aggregator = NewMetricsAggregator(aggregatorResyncInterval, clusterId)
 	}
 	return aggregator
 }

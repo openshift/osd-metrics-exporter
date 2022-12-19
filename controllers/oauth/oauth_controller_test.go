@@ -58,6 +58,7 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 		providers         []configv1.IdentityProviderType
 		existingProviders []configv1.IdentityProviderType
 		expectedResult    map[configv1.IdentityProviderType]int
+		clusterId         string
 	}{
 		{
 			name: "basic",
@@ -90,7 +91,7 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := configv1.Install(scheme.Scheme)
@@ -106,6 +107,7 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 			reconciler := OAuthReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
+				ClusterId:         tc.clusterId,
 			}
 
 			_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{

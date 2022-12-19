@@ -94,6 +94,7 @@ func TestReconcileConfigMap_Reconcile(t *testing.T) {
 		name            string
 		cfgMapData      map[string]string
 		expectedResults string
+		clusterId       string
 	}{
 		{
 			name:       "user-ca-bundle exists",
@@ -106,7 +107,7 @@ cluster_proxy_ca_expiry_timestamp{name="osd_exporter",subject="O=Default Company
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := corev1.AddToScheme(scheme.Scheme)
@@ -142,9 +143,11 @@ cluster_proxy_ca_expiry_timestamp{name="osd_exporter",subject="O=Default Company
 		name            string
 		cfgMapData      map[string]string
 		expectedResults string
+		clusterId       string
 	}{
 		{
 			name:       "user-ca-bundle invalid PEM",
+			clusterId:  "i-am-a-cluster-id",
 			cfgMapData: makeTestCAData(caBundleCRT, "derp"),
 			expectedResults: `
 # HELP cluster_proxy_ca_valid Indicates if cluster proxy CA valid
@@ -154,7 +157,7 @@ cluster_proxy_ca_valid{name="osd_exporter"} 0
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := corev1.AddToScheme(scheme.Scheme)
@@ -165,6 +168,7 @@ cluster_proxy_ca_valid{name="osd_exporter"} 0
 			reconciler := ConfigMapReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
+				ClusterId:         tc.clusterId,
 			}
 			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
