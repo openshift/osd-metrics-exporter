@@ -54,7 +54,7 @@ func TestReconcileGroup_Reconcile(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(group).Build()
 			reconcileGroup := &GroupReconciler{
 				Client:            fakeClient,
-				MetricsAggregator: metrics.NewMetricsAggregator(time.Second * 10),
+				MetricsAggregator: metrics.NewMetricsAggregator(time.Second*10, "cluster-id"),
 			}
 			_, err = reconcileGroup.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{Name: clusterAdminGroupName},

@@ -163,10 +163,8 @@ func (a *AdoptionMetricsAggregator) SetLimitedSupport(uuid string, enabled bool)
 
 	if enabled {
 		a.limitedSupport.With(labels).Set(1)
-
 	} else {
 		a.limitedSupport.With(labels).Set(0)
-
 	}
 }
 
