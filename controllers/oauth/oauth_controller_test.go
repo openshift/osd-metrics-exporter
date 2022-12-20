@@ -90,7 +90,7 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, "cluster-id")
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := configv1.Install(scheme.Scheme)
