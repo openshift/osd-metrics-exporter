@@ -19,10 +19,11 @@ import (
 
 func TestReconcileGroup_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		users  []string
-		result int
-		delete bool
+		name      string
+		users     []string
+		result    int
+		delete    bool
+		clusterId string
 	}{
 		{
 			name:   "empty cluster-admins group",
@@ -54,7 +55,7 @@ func TestReconcileGroup_Reconcile(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(group).Build()
 			reconcileGroup := &GroupReconciler{
 				Client:            fakeClient,
-				MetricsAggregator: metrics.NewMetricsAggregator(time.Second*10, "cluster-id"),
+				MetricsAggregator: metrics.NewMetricsAggregator(time.Second*10, tc.clusterId),
 			}
 			_, err = reconcileGroup.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{Name: clusterAdminGroupName},

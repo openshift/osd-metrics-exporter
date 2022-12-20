@@ -117,6 +117,7 @@ func main() {
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
+		ClusterId:         clusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Configmap")
 		os.Exit(1)
@@ -126,6 +127,7 @@ func main() {
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
+		ClusterId:         clusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Group")
 		os.Exit(1)
