@@ -48,9 +48,8 @@ func makeTestProxy(name, namespace string, proxySpec configv1.ProxySpec, proxySt
 func TestReconcileProxy_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
 		name                     string
-		proxyStatus              openshiftapi.ProxyStatus
-		proxySpec                openshiftapi.ProxySpec
-		clusterId                string
+		proxyStatus              configv1.ProxyStatus
+		proxySpec                configv1.ProxySpec
 		expectedClusterIDResults string
 		expectedProxyResults     string
 	}{
@@ -65,7 +64,6 @@ func TestReconcileProxy_Reconcile(t *testing.T) {
 				HTTPProxy:  "http://example.com",
 				HTTPSProxy: "https://example.com",
 			},
-			clusterId: "i-am-a-cluster-id",
 			expectedClusterIDResults: `
 # HELP cluster_id Indicates the cluster id
 # TYPE cluster_id gauge
@@ -84,7 +82,6 @@ cluster_proxy{_id="cluster-id",http="1",https="1",name="osd_exporter",trusted_ca
 				HTTPProxy:  "http://example.com",
 				HTTPSProxy: "https://example.com",
 			},
-			clusterId: "i-am-a-cluster-id",
 			expectedClusterIDResults: `
 # HELP cluster_id Indicates the cluster id
 # TYPE cluster_id gauge
@@ -98,7 +95,7 @@ cluster_proxy{_id="cluster-id",http="1",https="1",name="osd_exporter",trusted_ca
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, "cluster-id")
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := configv1.Install(scheme.Scheme)
@@ -108,7 +105,7 @@ cluster_proxy{_id="cluster-id",http="1",https="1",name="osd_exporter",trusted_ca
 			reconciler := ProxyReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
-				ClusterId:         tc.clusterId,
+				ClusterId:         "cluster-id",
 			}
 			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
