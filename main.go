@@ -24,6 +24,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -51,9 +52,13 @@ import (
 
 // Change below variables to serve metrics on different host or port.
 var (
-	scheme      = runtime.NewScheme()
-	setupLog    = ctrl.Log.WithName("setup")
-	metricsPort = "8383"
+	scheme          = runtime.NewScheme()
+	setupLog        = ctrl.Log.WithName("setup")
+	metricsPort     = "8383"
+	watchNamespaces = []string{
+		"openshift-osd-metrics",
+		"openshift-config",
+	}
 )
 
 func init() {
@@ -90,7 +95,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "osd-metrics-exporter-lock",
-		Namespace:              "openshift-osd-metrics",
+		NewCache:               cache.MultiNamespacedCacheBuilder(watchNamespaces),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

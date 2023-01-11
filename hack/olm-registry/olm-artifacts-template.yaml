@@ -1,114 +1,142 @@
 apiVersion: v1
 kind: Template
 parameters:
-- name: REGISTRY_IMG
-  required: true
-- name: CHANNEL
-  value: staging
-  required: true
-- name: IMAGE_TAG
-  required: true
-- name: IMAGE_DIGEST
-  required: true
-- name: REPO_NAME
-  value: osd-metrics-exporter
-  required: true
+  - name: REGISTRY_IMG
+    required: true
+  - name: CHANNEL
+    value: staging
+    required: true
+  - name: IMAGE_TAG
+    required: true
+  - name: IMAGE_DIGEST
+    required: true
+  - name: REPO_NAME
+    value: osd-metrics-exporter
+    required: true
 metadata:
   name: selectorsyncset-template
 objects:
-- apiVersion: hive.openshift.io/v1
-  kind: SelectorSyncSet
-  metadata:
-    labels:
-      managed.openshift.io/gitHash: ${IMAGE_TAG}
-      managed.openshift.io/gitRepoName: ${REPO_NAME}
-      managed.openshift.io/osd: 'true'
-    name: osd-metrics-exporter
-  spec:
-    clusterDeploymentSelector:
-      matchLabels:
-        api.openshift.com/managed: 'true'
-    resourceApplyMode: Sync
-    resources:
-    - apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: openshift-osd-metrics
-        labels:
-          openshift.io/cluster-monitoring: 'true'
-    - apiVersion: rbac.authorization.k8s.io/v1
-      kind: Role
-      metadata:
-        name: prometheus-k8s
-        namespace: openshift-osd-metrics
-      rules:
-      - apiGroups:
-        - ''
-        resources:
-        - services
-        - endpoints
-        - pods
-        verbs:
-        - get
-        - list
-        - watch
-    - apiVersion: rbac.authorization.k8s.io/v1
-      kind: RoleBinding
-      metadata:
-        name: prometheus-k8s
-        namespace: openshift-osd-metrics
-      roleRef:
-        kind: Role
-        name: prometheus-k8s
-      subjects:
-      - kind: ServiceAccount
-        name: prometheus-k8s
-        namespace: openshift-monitoring
-    - apiVersion: operators.coreos.com/v1alpha1
-      kind: CatalogSource
-      metadata:
-        labels:
-          opsrc-datastore: "true"
-          opsrc-provider: redhat
-        name: osd-metrics-exporter-registry
-        namespace: openshift-osd-metrics
-      spec:
-        image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
-        affinity:
-          nodeAffinity:
-            preferredDuringSchedulingIgnoredDuringExecution:
-            - preference:
-                matchExpressions:
-                - key: node-role.kubernetes.io/infra
-                  operator: Exists
-              weight: 1
-        tolerations:
-          - effect: NoSchedule
-            key: node-role.kubernetes.io/infra
-            operator: Exists
-        displayName: OSD Metrics Exporter
-        icon:
-          base64data: ''
-          mediatype: ''
-        publisher: Red Hat
-        sourceType: grpc
-    - apiVersion: operators.coreos.com/v1alpha1
-      kind: Subscription
-      metadata:
-        name: osd-metrics-exporter
-        namespace: openshift-osd-metrics
-      spec:
-        channel: ${CHANNEL}
-        name: osd-metrics-exporter
-        source: osd-metrics-exporter-registry
-        sourceNamespace: openshift-osd-metrics
-    - apiVersion: operators.coreos.com/v1alpha2
-      kind: OperatorGroup
-      metadata:
-        name: osd-metrics-exporter
-        namespace: openshift-osd-metrics
-        annotations:
-          olm.operatorframework.io/exclude-global-namespace-resolution: 'true'
-      spec:
-        targetNamespaces:
-        - openshift-osd-metrics
+  - apiVersion: hive.openshift.io/v1
+    kind: SelectorSyncSet
+    metadata:
+      labels:
+        managed.openshift.io/gitHash: ${IMAGE_TAG}
+        managed.openshift.io/gitRepoName: ${REPO_NAME}
+        managed.openshift.io/osd: 'true'
+      name: osd-metrics-exporter
+    spec:
+      clusterDeploymentSelector:
+        matchLabels:
+          api.openshift.com/managed: 'true'
+      resourceApplyMode: Sync
+      resources:
+        - apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: openshift-osd-metrics
+            labels:
+              openshift.io/cluster-monitoring: 'true'
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: prometheus-k8s
+            namespace: openshift-osd-metrics
+          rules:
+            - apiGroups:
+                - ''
+              resources:
+                - services
+                - endpoints
+                - pods
+              verbs:
+                - get
+                - list
+                - watch
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: prometheus-k8s
+            namespace: openshift-osd-metrics
+          roleRef:
+            kind: Role
+            name: prometheus-k8s
+          subjects:
+            - kind: ServiceAccount
+              name: prometheus-k8s
+              namespace: openshift-monitoring
+        - apiVersion: operators.coreos.com/v1alpha1
+          kind: CatalogSource
+          metadata:
+            labels:
+              opsrc-datastore: "true"
+              opsrc-provider: redhat
+            name: osd-metrics-exporter-registry
+            namespace: openshift-osd-metrics
+          spec:
+            image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
+            affinity:
+              nodeAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                  - preference:
+                      matchExpressions:
+                        - key: node-role.kubernetes.io/infra
+                          operator: Exists
+                    weight: 1
+            tolerations:
+              - effect: NoSchedule
+                key: node-role.kubernetes.io/infra
+                operator: Exists
+            displayName: OSD Metrics Exporter
+            icon:
+              base64data: ''
+              mediatype: ''
+            publisher: Red Hat
+            sourceType: grpc
+        - apiVersion: operators.coreos.com/v1alpha1
+          kind: Subscription
+          metadata:
+            name: osd-metrics-exporter
+            namespace: openshift-osd-metrics
+          spec:
+            channel: ${CHANNEL}
+            name: osd-metrics-exporter
+            source: osd-metrics-exporter-registry
+            sourceNamespace: openshift-osd-metrics
+        - apiVersion: operators.coreos.com/v1alpha2
+          kind: OperatorGroup
+          metadata:
+            name: osd-metrics-exporter
+            namespace: openshift-osd-metrics
+            annotations:
+              olm.operatorframework.io/exclude-global-namespace-resolution: 'true'
+          spec:
+            targetNamespaces:
+              - openshift-osd-metrics
+        - kind: RoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          metadata:
+            name: osd-metrics-exporter-watch-configmaps
+            namespace: openshift-config
+          subjects:
+            - kind: ServiceAccount
+              name: osd-metrics-exporter
+              namespace: openshift-osd-metrics
+          roleRef:
+            kind: Role
+            name: osd-metrics-exporter-watch-configmaps
+            namespace: openshift-config
+            apiGroup: rbac.authorization.k8s.io
+        - kind: Role
+          apiVersion: rbac.authorization.k8s.io/v1
+          metadata:
+            name: osd-metrics-exporter-watch-configmaps
+            namespace: openshift-config
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - configmaps
+              verbs:
+                - get
+                - list
+                - watch

@@ -16,48 +16,45 @@ A prometheus exporter to expose metrics about various features used in Openshift
 
 1. Create `Namespace`, `Role` and `RoleBinding`. Requires [yq](https://github.com/mikefarah/yq).
 
-```
-$ for k in "Namespace" "Role" "RoleBinding"; do; k=$k yq '.objects[].spec.resources[] | select(.kind==strenv(k))' < hack/olm-registry/olm-artifacts-template.yaml|  oc create -f -; done
-```
-
-2. Create `ClusterRole`, `ClusterRoleBinding` and `ServiceAccount`. 
-
-```
-$ oc -n openshift-osd-metrics create -f deploy/cluster_role_binding.yaml
-clusterrolebinding.rbac.authorization.k8s.io/osd-metrics-exporter created
-$ oc -n openshift-osd-metrics create -f deploy/cluster_role.yaml
-clusterrole.rbac.authorization.k8s.io/osd-metrics-exporter created
-$ oc -n openshift-osd-metrics create -f deploy/service_account.yaml
-serviceaccount/osd-metrics-exporter created
+```shell
+for k in "Namespace" "Role" "RoleBinding"; do;
+  k=$k yq '.objects[].spec.resources[] | select(.kind==strenv(k))' \
+    hack/olm-registry/olm-artifacts-template.yaml \
+    | oc apply -f - ; 
+done
 ```
 
-3. Requires operator-sdk >= 1.X
+2. Create `(Cluster-)Role`, `(Cluster-)RoleBinding` and `ServiceAccount`. 
 
-```
-$ operator-sdk version
-operator-sdk version: "v1.25.2", commit: "b63b921837de8dd6ce480033e427ecfc5e34abcc", kubernetes version: "v1.25.0", go version: "go1.19.3", GOOS: "darwin", GOARCH: "arm64"
-```
-
-4. Optionally authenticate as the `serviceaccount`.
-
-```
-$ oc login "$(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL')" --token "$(oc create token -n openshift-osd-metrics osd-metrics-exporter --as backplane-cluster-admin)"
-```
-
-5. Switch to project
-
-```
-$ oc project openshift-osd-metrics
-Now using project "openshift-osd-metrics" on server "https://api.sno.dofinn.xyz:6443".
+```shell
+oc apply -f ./deploy/10_osd-metrics-exporter.ClusterRole.yaml
+oc apply -f ./deploy/10_osd-metrics-exporter_openshift-osd-metrics.Role.yaml
+oc apply -f ./deploy/10_osd-metrics-exporter_openshift-osd-metrics.ServiceAccount.yaml
+oc apply -f ./deploy/20_osd-metrics-exporter.ClusterRoleBinding.yaml
+oc apply -f ./deploy/20_osd-metrics-exporter_openshift-osd-metrics.RoleBinding.yaml
+oc apply -f ./resources/10_osd-metrics-exporter_openshift-config.Role.yaml
+oc apply -f ./resources/10_osd-metrics-exporter_openshift-config.RoleBinding.yaml
 ```
 
-6. Run the operator
+3. Optionally authenticate as the `serviceaccount`.
 
+```shell
+# local crc cluster
+oc login "$(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL')" --token "$(oc create token -n openshift-osd-metrics osd-metrics-exporter)"
+# openshift cluster
+oc login "$(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL')" --token "$(oc create token -n openshift-osd-metrics osd-metrics-exporter --as backplane-cluster-admin)"
 ```
-$ operator-sdk run --local
-INFO[0000] Running the operator locally in namespace openshift-osd-metrics.
-{"level":"info","ts":1655546577.210883,"logger":"cmd","msg":"Operator Version: 0.0.1"}
-{"level":"info","ts":1655546577.2109017,"logger":"cmd","msg":"Go Version: go1.18.2"}
-{"level":"info","ts":1655546577.2109056,"logger":"cmd","msg":"Go OS/Arch: linux/amd64"}
-...
+
+4. Switch to project
+
+```shell
+oc project openshift-osd-metrics
 ```
+
+5. Build and run the operator
+
+```shell
+make go-build
+./build/_output/bin/osd-metrics-exporter
+```
+
