@@ -1,12 +1,13 @@
+# Allow the operator to watch some cluster-scoped resources
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: osd-metrics-exporter
+  name: osd-metrics-exporter-watch-clusterscope
 subjects:
   - kind: ServiceAccount
     name: osd-metrics-exporter
     namespace: openshift-osd-metrics
 roleRef:
   kind: ClusterRole
-  name: osd-metrics-exporter
+  name: osd-metrics-exporter-watch-clusterscope
   apiGroup: rbac.authorization.k8s.io
