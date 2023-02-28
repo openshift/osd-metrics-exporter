@@ -10,9 +10,9 @@ var (
 	aggregator *AdoptionMetricsAggregator
 )
 
-func GetMetricsAggregator() *AdoptionMetricsAggregator {
+func GetMetricsAggregator(clusterId string) *AdoptionMetricsAggregator {
 	if aggregator == nil {
-		aggregator = NewMetricsAggregator(aggregatorResyncInterval)
+		aggregator = NewMetricsAggregator(aggregatorResyncInterval, clusterId)
 	}
 	return aggregator
 }

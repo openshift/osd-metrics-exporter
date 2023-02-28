@@ -15,9 +15,6 @@ package proxy
 
 import (
 	"context"
-	"fmt"
-	"os"
-
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -25,18 +22,16 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var log = logf.Log.WithName("controller_proxy")
-
-const EnvClusterID = "CLUSTER_ID"
 
 // ProxyReconciler reconciles a Proxy object
 type ProxyReconciler struct {
 	client.Client
 	Scheme            *runtime.Scheme
 	MetricsAggregator *metrics.AdoptionMetricsAggregator
+	ClusterId         string
 }
 
 // Reconcile reads that state of the cluster for a Proxy object and makes changes based on the state read
@@ -49,11 +44,7 @@ func (r *ProxyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling Proxy")
 
-	uuid := os.Getenv(EnvClusterID)
-	if uuid == "" {
-		return reconcile.Result{}, fmt.Errorf("cluster ID returned as empty string")
-	}
-	r.MetricsAggregator.SetClusterID(uuid)
+	r.MetricsAggregator.SetClusterID(r.ClusterId)
 
 	// Fetch the Proxy instance
 	instance := &configv1.Proxy{}

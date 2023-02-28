@@ -15,6 +15,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"os"
 
@@ -102,6 +103,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	setupLog.Info("retrieving cluster id")
+	clusterId, err := getClusterID(mgr.GetAPIReader())
+	if err != nil {
+		setupLog.Error(err, "Failed to retrieve")
+		os.Exit(1)
+	}
+
 	if err = (&clusterrole.ClusterRoleReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -110,17 +118,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("exporting cluster id to container env")
-	err = exportClusterID(mgr.GetAPIReader())
-	if err != nil {
-		setupLog.Error(err, "Failed to retrieve and export ClusterID")
-		os.Exit(1)
-	}
-
 	if err = (&configmap.ConfigMapReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
-		MetricsAggregator: metrics.GetMetricsAggregator(),
+		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Configmap")
 		os.Exit(1)
@@ -129,7 +130,7 @@ func main() {
 	if err = (&group.GroupReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
-		MetricsAggregator: metrics.GetMetricsAggregator(),
+		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Group")
 		os.Exit(1)
@@ -138,7 +139,8 @@ func main() {
 	if err = (&limited_support.LimitedSupportConfigMapReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
-		MetricsAggregator: metrics.GetMetricsAggregator(),
+		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
+		ClusterId:         clusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Limited Support")
 		os.Exit(1)
@@ -147,7 +149,7 @@ func main() {
 	if err = (&oauth.OAuthReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
-		MetricsAggregator: metrics.GetMetricsAggregator(),
+		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "OAuth")
 		os.Exit(1)
@@ -156,7 +158,8 @@ func main() {
 	if err = (&proxy.ProxyReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
-		MetricsAggregator: metrics.GetMetricsAggregator(),
+		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
+		ClusterId:         clusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Proxy")
 		os.Exit(1)
@@ -172,14 +175,14 @@ func main() {
 	}
 
 	// Setup metrics collector
-	collector := metrics.GetMetricsAggregator()
+	collector := metrics.GetMetricsAggregator(clusterId)
 	done := collector.Run()
 	defer close(done)
 	metricsConfig := customMetrics.NewBuilder(operatorConfig.OperatorNamespace, operatorConfig.OperatorName).
 		WithPath("/metrics").
 		WithPort(metricsPort).
 		WithServiceMonitor().
-		WithCollectors(metrics.GetMetricsAggregator().GetMetrics()).
+		WithCollectors(metrics.GetMetricsAggregator(clusterId).GetMetrics()).
 		GetConfig()
 	if err = customMetrics.ConfigureMetrics(context.TODO(), *metricsConfig); err != nil {
 		setupLog.Error(err, "Failed to run metrics server")
@@ -193,13 +196,15 @@ func main() {
 	}
 }
 
-func exportClusterID(client client.Reader) error {
+func getClusterID(client client.Reader) (string, error) {
 	cv := &configv1.ClusterVersion{}
-	err := client.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
-	if err != nil {
-		return err
+	if err := client.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv); err != nil {
+		return "", err
 	}
-	id := cv.Spec.ClusterID
-	os.Setenv(proxy.EnvClusterID, string(id))
-	return nil
+
+	if string(cv.Spec.ClusterID) == "" {
+		return "", errors.New("got empty string for cluster id from the ClusterVersion custom resource")
+	}
+
+	return string(cv.Spec.ClusterID), nil
 }

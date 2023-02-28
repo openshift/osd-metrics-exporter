@@ -15,14 +15,13 @@ package proxy
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
-	openshiftapi "github.com/openshift/api/config/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,39 +36,38 @@ const (
 	testNamespace = "test"
 )
 
-func makeTestProxy(name, namespace string, proxySpec openshiftapi.ProxySpec, proxyStatus openshiftapi.ProxyStatus) *openshiftapi.Proxy {
-	proxy := &openshiftapi.Proxy{
+func makeTestProxy(name, namespace string, proxySpec configv1.ProxySpec, proxyStatus configv1.ProxyStatus) *configv1.Proxy {
+	proxy := &configv1.Proxy{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Spec:       proxySpec,
 		Status:     proxyStatus,
 	}
 	return proxy
 }
+
 func TestReconcileProxy_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
 		name                     string
-		proxyStatus              openshiftapi.ProxyStatus
-		proxySpec                openshiftapi.ProxySpec
-		testEnvClusterID         string
+		proxyStatus              configv1.ProxyStatus
+		proxySpec                configv1.ProxySpec
 		expectedClusterIDResults string
 		expectedProxyResults     string
 	}{
 		{
-			name: "with ca and cluster id environment non empty string",
-			proxySpec: openshiftapi.ProxySpec{
-				TrustedCA: openshiftapi.ConfigMapNameReference{
+			name: "with ca",
+			proxySpec: configv1.ProxySpec{
+				TrustedCA: configv1.ConfigMapNameReference{
 					Name: "test",
 				},
 			},
-			proxyStatus: openshiftapi.ProxyStatus{
+			proxyStatus: configv1.ProxyStatus{
 				HTTPProxy:  "http://example.com",
 				HTTPSProxy: "https://example.com",
 			},
-			testEnvClusterID: "i-am-a-cluster-id",
 			expectedClusterIDResults: `
 # HELP cluster_id Indicates the cluster id
 # TYPE cluster_id gauge
-cluster_id{_id="i-am-a-cluster-id",name="osd_exporter"} 1
+cluster_id{_id="cluster-id",name="osd_exporter"} 1
 	`,
 			expectedProxyResults: `
 # HELP cluster_proxy Indicates cluster proxy state
@@ -78,17 +76,16 @@ cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="1"} 1
 `,
 		},
 		{
-			name:      "no ca and cluster id environment non empty string",
-			proxySpec: openshiftapi.ProxySpec{},
-			proxyStatus: openshiftapi.ProxyStatus{
+			name:      "no ca",
+			proxySpec: configv1.ProxySpec{},
+			proxyStatus: configv1.ProxyStatus{
 				HTTPProxy:  "http://example.com",
 				HTTPSProxy: "https://example.com",
 			},
-			testEnvClusterID: "i-am-a-cluster-id",
 			expectedClusterIDResults: `
 # HELP cluster_id Indicates the cluster id
 # TYPE cluster_id gauge
-cluster_id{_id="i-am-a-cluster-id",name="osd_exporter"} 1
+cluster_id{_id="cluster-id",name="osd_exporter"} 1
 	`,
 			expectedProxyResults: `
 # HELP cluster_proxy Indicates cluster proxy state
@@ -98,17 +95,17 @@ cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			os.Setenv(EnvClusterID, tc.testEnvClusterID)
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, "cluster-id")
 			done := metricsAggregator.Run()
 			defer close(done)
-			err := openshiftapi.Install(scheme.Scheme)
+			err := configv1.Install(scheme.Scheme)
 			require.NoError(t, err)
 
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(makeTestProxy(testName, testNamespace, tc.proxySpec, tc.proxyStatus)).Build()
 			reconciler := ProxyReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
+				ClusterId:         "cluster-id",
 			}
 			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
@@ -122,7 +119,7 @@ cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
 			time.Sleep(time.Second * 3)
 			require.NoError(t, err)
 			require.NotNil(t, result)
-			var testProxy openshiftapi.Proxy
+			var testProxy configv1.Proxy
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: testName, Namespace: testNamespace}, &testProxy)
 			require.NoError(t, err)
 
@@ -133,59 +130,6 @@ cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
 			metric = metricsAggregator.GetClusterProxyMetric()
 			err = testutil.CollectAndCompare(metric, strings.NewReader(tc.expectedProxyResults))
 			require.NoError(t, err)
-		})
-	}
-}
-
-func TestReconcileProxy_ReconcileError(t *testing.T) {
-	for _, tc := range []struct {
-		name                     string
-		proxyStatus              openshiftapi.ProxyStatus
-		proxySpec                openshiftapi.ProxySpec
-		testEnvClusterID         string
-		expectedClusterIDResults string
-		expectedProxyResults     string
-	}{
-		{
-			name:      "no ca and cluster id env variable is empty string",
-			proxySpec: openshiftapi.ProxySpec{},
-			proxyStatus: openshiftapi.ProxyStatus{
-				HTTPProxy:  "http://example.com",
-				HTTPSProxy: "https://example.com",
-			},
-			testEnvClusterID: "",
-			expectedClusterIDResults: `
-# HELP cluster_id Indicates the cluster id
-# TYPE cluster_id gauge
-cluster_id{_id="",name="osd_exporter"} 1
-	`,
-			expectedProxyResults: `
-# HELP cluster_proxy Indicates cluster proxy state
-# TYPE cluster_proxy gauge
-cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
-`,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			os.Setenv(EnvClusterID, tc.testEnvClusterID)
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second)
-			done := metricsAggregator.Run()
-			defer close(done)
-			err := openshiftapi.Install(scheme.Scheme)
-			require.NoError(t, err)
-
-			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(makeTestProxy(testName, testNamespace, tc.proxySpec, tc.proxyStatus)).Build()
-			reconciler := ProxyReconciler{
-				Client:            fakeClient,
-				MetricsAggregator: metricsAggregator,
-			}
-			_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: testNamespace,
-					Name:      testName,
-				},
-			})
-			require.Error(t, err)
 		})
 	}
 }
