@@ -16,8 +16,6 @@ package limited_support
 import (
 	"context"
 	"fmt"
-	"os"
-
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -35,8 +33,6 @@ const (
 	limitedSupportConfigMapNamespace = "openshift-osd-metrics"
 )
 
-const EnvClusterID = "CLUSTER_ID"
-
 var log = logf.Log.WithName("controller_limited_support")
 
 // LimitedSupportConfigMapReconciler reconciles a ConfigMap object
@@ -44,6 +40,7 @@ type LimitedSupportConfigMapReconciler struct {
 	client.Client
 	Scheme            *runtime.Scheme
 	MetricsAggregator *metrics.AdoptionMetricsAggregator
+	ClusterId         string
 }
 
 // Reconcile reads that state of the cluster for a ConfigMap object limited-support and makes changes based the contained data
@@ -52,27 +49,22 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 	reqLogger.Info("Reconciling Limited Support ConfigMap")
 
 	// Fetch the ConfigMap openshift-osd-metrics/limited-support
-	uuid, ok := os.LookupEnv(EnvClusterID)
-	if !ok || uuid == "" {
-		return ctrl.Result{}, fmt.Errorf("cluster ID unset or returned as empty string")
-	}
 	cfgMap := &corev1.ConfigMap{}
-	ns := limitedSupportConfigMapNamespace
-	err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: limitedSupportConfigMapName}, cfgMap)
+	err := r.Client.Get(ctx, types.NamespacedName{Namespace: limitedSupportConfigMapNamespace, Name: limitedSupportConfigMapName}, cfgMap)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			reqLogger.Info(fmt.Sprintf("Did not find ConfigMap %v", limitedSupportConfigMapName))
-			r.MetricsAggregator.SetLimitedSupport(uuid, false)
+			r.MetricsAggregator.SetLimitedSupport(r.ClusterId, false)
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
 	reqLogger.Info(fmt.Sprintf("Found ConfigMap %v", limitedSupportConfigMapName))
-	r.MetricsAggregator.SetLimitedSupport(uuid, true)
+	r.MetricsAggregator.SetLimitedSupport(r.ClusterId, true)
 	return ctrl.Result{}, nil
 }
 
