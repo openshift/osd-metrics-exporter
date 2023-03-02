@@ -44,6 +44,7 @@ type ConfigMapReconciler struct {
 	client.Client
 	Scheme            *runtime.Scheme
 	MetricsAggregator *metrics.AdoptionMetricsAggregator
+	ClusterId         string
 }
 
 // Reconcile reads that state of the cluster for a ConfigMap object and makes changes based the contained data
@@ -72,7 +73,7 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// and handle gracefully rather then causing stacktrace.
 		if strings.Contains(err.Error(), "failed parsing certificate") {
 			reqLogger.Info("failed parsing certificate")
-			r.MetricsAggregator.SetClusterProxyCAValid(false)
+			r.MetricsAggregator.SetClusterProxyCAValid(r.ClusterId, false)
 			reqLogger.Info("setting CA valid metric to false")
 			return ctrl.Result{}, nil
 		}
@@ -87,8 +88,8 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	reqLogger.Info(fmt.Sprintf("Found %d cert bundles", countCertBundle))
 	for _, cert := range certBundle {
 		reqLogger.Info(fmt.Sprintf("Certificate Expiry %d", cert.NotAfter.Unix()))
-		r.MetricsAggregator.SetClusterProxyCAExpiry(cert.Subject.String(), cert.NotAfter.UTC().Unix())
-		r.MetricsAggregator.SetClusterProxyCAValid(true)
+		r.MetricsAggregator.SetClusterProxyCAExpiry(r.ClusterId, cert.Subject.String(), cert.NotAfter.UTC().Unix())
+		r.MetricsAggregator.SetClusterProxyCAValid(r.ClusterId, true)
 	}
 	return ctrl.Result{}, nil
 }

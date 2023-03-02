@@ -72,7 +72,7 @@ cluster_id{_id="cluster-id",name="osd_exporter"} 1
 			expectedProxyResults: `
 # HELP cluster_proxy Indicates cluster proxy state
 # TYPE cluster_proxy gauge
-cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="1"} 1
+cluster_proxy{_id="cluster-id",http="1",https="1",name="osd_exporter",trusted_ca="1"} 1
 `,
 		},
 		{
@@ -90,7 +90,7 @@ cluster_id{_id="cluster-id",name="osd_exporter"} 1
 			expectedProxyResults: `
 # HELP cluster_proxy Indicates cluster proxy state
 # TYPE cluster_proxy gauge
-cluster_proxy{http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
+cluster_proxy{_id="cluster-id",http="1",https="1",name="osd_exporter",trusted_ca="0"} 1
 `,
 		},
 	} {
