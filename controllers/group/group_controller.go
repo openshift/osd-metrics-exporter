@@ -41,6 +41,7 @@ type GroupReconciler struct {
 	client.Client
 	Scheme            *runtime.Scheme
 	MetricsAggregator *metrics.AdoptionMetricsAggregator
+	ClusterId         string
 }
 
 // Reconcile reads that state of the cluster for a Group object and makes changes based on the state read
@@ -69,9 +70,9 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 				return ctrl.Result{}, err
 			}
 		}
-		r.MetricsAggregator.SetClusterAdmin(len(group.Users) > 0)
+		r.MetricsAggregator.SetClusterAdmin(r.ClusterId, len(group.Users) > 0)
 	} else {
-		r.MetricsAggregator.SetClusterAdmin(false)
+		r.MetricsAggregator.SetClusterAdmin(r.ClusterId, false)
 		if utils.ContainsString(group.Finalizers, finalizer) {
 			controllerutil.RemoveFinalizer(group, finalizer)
 			if err := r.Client.Update(ctx, group); err != nil {

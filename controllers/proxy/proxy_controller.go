@@ -15,6 +15,7 @@ package proxy
 
 import (
 	"context"
+
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -79,7 +80,7 @@ func (r *ProxyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		proxyTrustedCA = "1"
 	}
 	// aggregate metrics
-	r.MetricsAggregator.SetClusterProxy(proxyHTTP, proxyHTTPS, proxyTrustedCA, proxyEnabled)
+	r.MetricsAggregator.SetClusterProxy(r.ClusterId, proxyHTTP, proxyHTTPS, proxyTrustedCA, proxyEnabled)
 	return ctrl.Result{}, nil
 }
 

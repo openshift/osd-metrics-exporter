@@ -94,19 +94,21 @@ func TestReconcileConfigMap_Reconcile(t *testing.T) {
 		name            string
 		cfgMapData      map[string]string
 		expectedResults string
+		clusterId       string
 	}{
 		{
+			clusterId:  "i-am-a-cluster-id",
 			name:       "user-ca-bundle exists",
 			cfgMapData: makeTestCAData(caBundleCRT, testCA),
 			expectedResults: `
 # HELP cluster_proxy_ca_expiry_timestamp Indicates cluster proxy CA expiry unix timestamp in UTC
 # TYPE cluster_proxy_ca_expiry_timestamp gauge
-cluster_proxy_ca_expiry_timestamp{name="osd_exporter",subject="O=Default Company Ltd,L=Default City,C=XX"} 1.734086723e+09
+cluster_proxy_ca_expiry_timestamp{_id="i-am-a-cluster-id", name="osd_exporter",subject="O=Default Company Ltd,L=Default City,C=XX"} 1.734086723e+09
 `,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second, "clusterId")
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := corev1.AddToScheme(scheme.Scheme)
@@ -117,6 +119,7 @@ cluster_proxy_ca_expiry_timestamp{name="osd_exporter",subject="O=Default Company
 			reconciler := ConfigMapReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
+				ClusterId:         tc.clusterId,
 			}
 			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
@@ -142,19 +145,21 @@ cluster_proxy_ca_expiry_timestamp{name="osd_exporter",subject="O=Default Company
 		name            string
 		cfgMapData      map[string]string
 		expectedResults string
+		clusterId       string
 	}{
 		{
 			name:       "user-ca-bundle invalid PEM",
+			clusterId:  "i-am-a-cluster-id",
 			cfgMapData: makeTestCAData(caBundleCRT, "derp"),
 			expectedResults: `
 # HELP cluster_proxy_ca_valid Indicates if cluster proxy CA valid
 # TYPE cluster_proxy_ca_valid gauge
-cluster_proxy_ca_valid{name="osd_exporter"} 0
+cluster_proxy_ca_valid{_id="i-am-a-cluster-id", name="osd_exporter"} 0
 `,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			metricsAggregator := metrics.NewMetricsAggregator(time.Second, "clusterId")
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
 			done := metricsAggregator.Run()
 			defer close(done)
 			err := corev1.AddToScheme(scheme.Scheme)
@@ -165,6 +170,7 @@ cluster_proxy_ca_valid{name="osd_exporter"} 0
 			reconciler := ConfigMapReconciler{
 				Client:            fakeClient,
 				MetricsAggregator: metricsAggregator,
+				ClusterId:         tc.clusterId,
 			}
 			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
 				NamespacedName: types.NamespacedName{
