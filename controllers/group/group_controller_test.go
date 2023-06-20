@@ -51,6 +51,7 @@ func TestReconcileGroup_Reconcile(t *testing.T) {
 			if tc.delete {
 				now := metav1.Now()
 				group.DeletionTimestamp = &now
+				group.Finalizers = append(group.Finalizers, "kubernetes")
 			}
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(group).Build()
 			reconcileGroup := &GroupReconciler{
