@@ -36,6 +36,9 @@ objects:
             name: openshift-osd-metrics
             labels:
               openshift.io/cluster-monitoring: 'true'
+              pod-security.kubernetes.io/enforce: 'baseline'
+              pod-security.kubernetes.io/audit: 'baseline'
+              pod-security.kubernetes.io/warn: 'baseline'
         - apiVersion: rbac.authorization.k8s.io/v1
           kind: Role
           metadata:
