@@ -41,3 +41,11 @@ rules:
       - list
       - watch
       - update
+  - apiGroups:
+      - machine.openshift.io
+    resources:
+      - machines
+    verbs:
+      - get
+      - list
+      - watch
