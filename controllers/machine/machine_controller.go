@@ -16,9 +16,16 @@ package machine
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
+	"time"
 
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	"github.com/openshift/osd-metrics-exporter/controllers/utils"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,20 +52,80 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	reqLogger.Info("Reconciling Machines")
 
 	// Fetch the machines in openshift-machine-api
-	machines := &machinev1beta1.Machine{}
-	err := r.Client.List(ctx, machines, &client.ListOptions{Namespace: machineNamespace})
+	machine := &machinev1beta1.Machine{}
+	err := r.Client.Get(ctx, client.ObjectKey{Namespace: machineNamespace, Name: req.Name}, machine)
 	if err != nil {
-		// Error reading the object - requeue the request.
-		return ctrl.Result{}, err
+		if errors.IsNotFound(err) {
+			reqLogger.Info("Machine not found. Ignoring")
+			return utils.DoNotRequeue()
+		}
+		reqLogger.Error(err, "An error occurred getting the machine")
+		return utils.RequeueWithError(err)
 	}
-	reqLogger.Info(fmt.Sprintf("Found Machines"))
+	reqLogger.Info(fmt.Sprintf("Found Machine: %s", machine.Name))
+
+	if machine != nil && machine.Status.Phase != nil && *machine.Status.Phase == "Deleting" {
+		return r.evaluateMachine(machine)
+	}
+
 	// r.MetricsAggregator.DoSomething(r.ClusterId, true)
-	return ctrl.Result{}, nil
+	return utils.DoNotRequeue()
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	indexerFunc := func(rawObj client.Object) []string {
+		event := rawObj.(*corev1.Event)
+		return []string{event.InvolvedObject.Name}
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Event{}, "involvedObject.name", indexerFunc); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&machinev1beta1.Machine{}).
 		Complete(r)
+}
+
+func (r *MachineReconciler) evaluateMachine(machine *machinev1beta1.Machine) (ctrl.Result, error) {
+	// Check Deleting Timestamp. If it's been less than 15m we don't care, requeue for 5m.
+	deletedTime := machine.GetDeletionTimestamp().Time
+	now := time.Now()
+	if !deletedTime.Before(now.Add(-15 * time.Minute)) {
+		fmt.Println("It hasn't been 15m yet")
+		return utils.RequeueAfter(5 * time.Minute)
+	}
+
+	fmt.Println("Evaluating Deleting Machine")
+
+	machineEventList := &corev1.EventList{}
+	err := r.Client.List(context.TODO(), machineEventList, &client.ListOptions{Namespace: "openshift-machine-api", FieldSelector: fields.SelectorFromSet(fields.Set{"involvedObject.name": machine.Name})})
+	if err != nil {
+		return utils.RequeueWithError(err)
+	}
+
+	for _, event := range machineEventList.Items {
+		if event.Reason == "DrainRequeued" {
+			if strings.Contains(event.Message, "error when evicting pods") {
+				re := regexp.MustCompile(`pods\/"([\w-]+)" -n "([\w-]+)"`)
+				matches := re.FindAllStringSubmatch(event.Message, -1)
+				fmt.Println("matches found")
+
+				if len(matches) > 1 && now.Sub(event.LastTimestamp.Time) <= (5*time.Minute) {
+					fmt.Println("This Event is the one to use")
+					fmt.Println(matches)
+					fmt.Println("---")
+				}
+
+				// TODO - Do something with these events - probably filter out all of the non-managed namespaces - is that a configmap somewhere on cluster we can get that list from?
+
+				// TODO - Update a metric, something like "CustomerPodsFailingDrain" with the machine name, node and instance labels. (node and instance will be the same value but we provide both labels here so that we can match on whatever the upstream OCP metric has it labeled as)
+				// TODO - What should that metric's value be? 1 for failing to drain?
+				// TODO - Open Question - do we have to manually clear that metric after the machine finally deletes or does it just stop firing?
+			}
+		}
+	}
+
+	return utils.DoNotRequeue()
 }

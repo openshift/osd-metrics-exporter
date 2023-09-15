@@ -374,6 +374,8 @@ github.com/openshift-online/ocm-sdk-go v0.1.344 h1:Dv2IhoQzR5ONwCoK2j8TYa3e3AXLv
 github.com/openshift-online/ocm-sdk-go v0.1.344/go.mod h1:KYOw8kAKAHyPrJcQoVR82CneQ4ofC02Na4cXXaTq4Nw=
 github.com/openshift/api v0.0.0-20221013123534-96eec44e1979 h1:NkfbwN34Q/UtfKUFEO9pxmdY06A/jBk80YBua+mxwUc=
 github.com/openshift/api v0.0.0-20221013123534-96eec44e1979/go.mod h1:LEnw1IVscIxyDnltE3Wi7bQb/QzIM8BfPNKoGA1Qlxw=
+github.com/openshift/api v0.0.0-20230426102702-398424d53f74 h1:2M+jyeT5ItCoeYqytYfkXQZo3m5amf8JWCpYSAKO7fU=
+github.com/openshift/api v0.0.0-20230426102702-398424d53f74/go.mod h1:LEnw1IVscIxyDnltE3Wi7bQb/QzIM8BfPNKoGA1Qlxw=
 github.com/openshift/build-machinery-go v0.0.0-20211213093930-7e33a7eb4ce3/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
 github.com/openshift/cluster-network-operator v0.0.0-20221129140819-4cbcf0da9cb8 h1:cZ2zUXeyf0nMURdJvuPX8YjkARCDLB/4ljtQ6OZLb48=
 github.com/openshift/cluster-network-operator v0.0.0-20221129140819-4cbcf0da9cb8/go.mod h1:TTSOlQLmSyZNLnRlGX8aEW7oSWFxavJDRWgu9bpd4ZY=

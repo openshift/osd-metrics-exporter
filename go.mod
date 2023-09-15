@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/google/go-cmp v0.5.9
 	// go get github.com/openshift/api@release-4.11
-	github.com/openshift/api v0.0.0-20221013123534-96eec44e1979
+	github.com/openshift/api v0.0.0-20230426102702-398424d53f74
 	// go get github.com/openshift/cluster-network-operator@release-4.11
 	github.com/openshift/cluster-network-operator v0.0.0-20221129140819-4cbcf0da9cb8
 	github.com/openshift/operator-custom-metrics v0.5.0

@@ -13,6 +13,12 @@ limitations under the License.
 
 package utils
 
+import (
+	"time"
+
+	ctrl "sigs.k8s.io/controller-runtime"
+)
+
 func ContainsString(stringArray []string, candidate string) bool {
 	for _, s := range stringArray {
 		if s == candidate {
@@ -20,4 +26,16 @@ func ContainsString(stringArray []string, candidate string) bool {
 		}
 	}
 	return false
+}
+
+func DoNotRequeue() (ctrl.Result, error) {
+	return ctrl.Result{}, nil
+}
+
+func RequeueWithError(err error) (ctrl.Result, error) {
+	return ctrl.Result{}, err
+}
+
+func RequeueAfter(duration time.Duration) (ctrl.Result, error) {
+	return ctrl.Result{RequeueAfter: duration}, nil
 }
