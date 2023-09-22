@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/openshift/osd-metrics-exporter/controllers/utils"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
@@ -49,26 +50,32 @@ type MachineReconciler struct {
 // Reconcile reads that state of the cluster for machine objects and makes changes based the contained data
 func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	reqLogger.Info("Reconciling Machines")
+	reqLogger.Info("Reconciling Machine")
 
 	// Fetch the machines in openshift-machine-api
 	machine := &machinev1beta1.Machine{}
 	err := r.Client.Get(ctx, client.ObjectKey{Namespace: machineNamespace, Name: req.Name}, machine)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			reqLogger.Info("Machine not found. Ignoring")
+			reqLogger.Info("Machine not found. Ensuring that no metrics for this machine are leftover")
+			// use the req.Name here because the Machine does not exist and will be nil
+			r.MetricsAggregator.RemoveMachineMetrics(req.Name)
 			return utils.DoNotRequeue()
 		}
 		reqLogger.Error(err, "An error occurred getting the machine")
 		return utils.RequeueWithError(err)
 	}
-	reqLogger.Info(fmt.Sprintf("Found Machine: %s", machine.Name))
 
 	if machine != nil && machine.Status.Phase != nil && *machine.Status.Phase == "Deleting" {
-		return r.evaluateMachine(machine)
+		reqLogger.Info("Found machine in deleting state. Looking for customer pods failing to delete")
+		ctx = context.WithValue(ctx, "machine", machine)
+		ctx = context.WithValue(ctx, "logger", reqLogger)
+		return r.evaluateMachine(ctx)
 	}
 
 	// r.MetricsAggregator.DoSomething(r.ClusterId, true)
+
+	reqLogger.Info("Reconcile Complete")
 	return utils.DoNotRequeue()
 }
 
@@ -88,44 +95,121 @@ func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *MachineReconciler) evaluateMachine(machine *machinev1beta1.Machine) (ctrl.Result, error) {
-	// Check Deleting Timestamp. If it's been less than 15m we don't care, requeue for 5m.
-	deletedTime := machine.GetDeletionTimestamp().Time
-	now := time.Now()
-	if !deletedTime.Before(now.Add(-15 * time.Minute)) {
-		fmt.Println("It hasn't been 15m yet")
-		return utils.RequeueAfter(5 * time.Minute)
+func getMachineFromCtx(ctx context.Context) (*machinev1beta1.Machine, error) {
+	machineRaw := ctx.Value("machine")
+	if machineRaw == nil {
+		return nil, fmt.Errorf("Machine does not exist in context")
 	}
 
-	fmt.Println("Evaluating Deleting Machine")
-
-	machineEventList := &corev1.EventList{}
-	err := r.Client.List(context.TODO(), machineEventList, &client.ListOptions{Namespace: "openshift-machine-api", FieldSelector: fields.SelectorFromSet(fields.Set{"involvedObject.name": machine.Name})})
-	if err != nil {
-		return utils.RequeueWithError(err)
+	machine, ok := machineRaw.(*machinev1beta1.Machine)
+	if !ok {
+		return nil, fmt.Errorf("Could not cast machine context value to Machine type")
 	}
 
-	for _, event := range machineEventList.Items {
+	return machine, nil
+}
+
+func getLoggerFromCtx(ctx context.Context) (logr.Logger, error) {
+	loggerRaw := ctx.Value("logger")
+	if loggerRaw == nil {
+		return logr.Logger{}, fmt.Errorf("Logger does not exist in context")
+	}
+
+	logger, ok := loggerRaw.(logr.Logger)
+	if !ok {
+		return logr.Logger{}, fmt.Errorf("Could not cast logger context value to Logger type")
+	}
+
+	return logger, nil
+}
+
+func getMostRecentDrainFailedEvent(reqLogger logr.Logger, eventList *corev1.EventList) *corev1.Event {
+	// if there are no events at all exit now
+	if len(eventList.Items) == 0 {
+		reqLogger.Info("No events")
+		return nil
+	}
+
+	var newestEvent *corev1.Event
+
+	for i := range eventList.Items {
+		event := &eventList.Items[i]
 		if event.Reason == "DrainRequeued" {
 			if strings.Contains(event.Message, "error when evicting pods") {
-				re := regexp.MustCompile(`pods\/"([\w-]+)" -n "([\w-]+)"`)
-				matches := re.FindAllStringSubmatch(event.Message, -1)
-				fmt.Println("matches found")
-
-				if len(matches) > 1 && now.Sub(event.LastTimestamp.Time) <= (5*time.Minute) {
-					fmt.Println("This Event is the one to use")
-					fmt.Println(matches)
-					fmt.Println("---")
+				if newestEvent == nil {
+					newestEvent = event
+					continue
 				}
-
-				// TODO - Do something with these events - probably filter out all of the non-managed namespaces - is that a configmap somewhere on cluster we can get that list from?
-
-				// TODO - Update a metric, something like "CustomerPodsFailingDrain" with the machine name, node and instance labels. (node and instance will be the same value but we provide both labels here so that we can match on whatever the upstream OCP metric has it labeled as)
-				// TODO - What should that metric's value be? 1 for failing to drain?
-				// TODO - Open Question - do we have to manually clear that metric after the machine finally deletes or does it just stop firing?
+				if newestEvent.LastTimestamp.Time.Before(event.LastTimestamp.Time) {
+					newestEvent = event
+					continue
+				}
 			}
 		}
 	}
 
-	return utils.DoNotRequeue()
+	return newestEvent
+}
+
+func (r *MachineReconciler) evaluateMachine(ctx context.Context) (ctrl.Result, error) {
+	machine, err := getMachineFromCtx(ctx)
+	if err != nil {
+		return utils.RequeueWithError(err)
+	}
+
+	reqLogger, err := getLoggerFromCtx(ctx)
+	if err != nil {
+		return utils.RequeueWithError(err)
+	}
+
+	// Check Deleting Timestamp. If it's been less than 15m we don't care, requeue for 5m.
+	deletedTime := machine.GetDeletionTimestamp().Time
+	now := time.Now()
+	if !deletedTime.Before(now.Add(-15 * time.Minute)) {
+		reqLogger.Info("Machine was not deleted long enough ago. Requeueing after 5m.")
+		return utils.RequeueAfter(5 * time.Minute)
+	}
+
+	reqLogger.Info("Evaluating Deleting Machine")
+
+	machineEventList := &corev1.EventList{}
+	err = r.Client.List(ctx, machineEventList, &client.ListOptions{Namespace: "openshift-machine-api", FieldSelector: fields.SelectorFromSet(fields.Set{"involvedObject.name": machine.Name})})
+	if err != nil {
+		reqLogger.Error(err, "Unable to query events for machine")
+		return utils.RequeueWithError(err)
+	}
+
+	event := getMostRecentDrainFailedEvent(reqLogger, machineEventList)
+	// TODO - do we need to ensure that the event happened within a specific timeframe? Like, within the last 15 minutes or something?
+	re := regexp.MustCompile(`pods\/"([\w-]+)" -n "([\w-]+)"`)
+	matches := re.FindAllStringSubmatch(event.Message, -1)
+
+	// store the pod/namespace combinations with the pod as the key because
+	// the pod name _should_ generally be unique, where there may be multiple pods
+	// in each namespace
+	podNamespaces := map[string]string{}
+
+	for _, podMatch := range matches {
+		if len(podMatch) != 3 {
+			reqLogger.Error(fmt.Errorf("Could not get the appropriate amount of matches"), "match", podMatch)
+			// Not sure how we'd get a match not equaling 3 but we should be cautious here
+			continue
+		}
+		// From the regex match we'll always get this podMatch slice with the following format:
+		// ['pods/"myPod-aaabbb" -n "namespace"', 'myPod-aaabbb', 'namespace']
+		podName := podMatch[1]
+		podNamespace := podMatch[2]
+
+		namespaceRe := regexp.MustCompile(`openshift-.*`)
+		// We don't generally care about openshift namespaces for customer metrics
+		if !namespaceRe.MatchString(podNamespace) {
+			podNamespaces[podName] = podNamespace
+		}
+	}
+
+	nodeName := machine.Status.NodeRef.Name
+	reqLogger.Info("The following pods are failing to drain from the machine", "node", nodeName, "pods/namespaces", podNamespaces)
+
+	r.MetricsAggregator.SetFailingDrainPodsForMachine(machine.Name, podNamespaces, nodeName)
+	return utils.RequeueAfter(1 * time.Minute)
 }

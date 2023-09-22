@@ -153,8 +153,9 @@ func main() {
 	}
 
 	if err = (&machine.MachineReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Machine")
 		os.Exit(1)
