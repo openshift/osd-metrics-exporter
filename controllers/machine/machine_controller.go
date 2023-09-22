@@ -70,10 +70,8 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		reqLogger.Info("Found machine in deleting state. Looking for customer pods failing to delete")
 		ctx = context.WithValue(ctx, "machine", machine)
 		ctx = context.WithValue(ctx, "logger", reqLogger)
-		return r.evaluateMachine(ctx)
+		return r.evaluateDeletingMachine(ctx)
 	}
-
-	// r.MetricsAggregator.DoSomething(r.ClusterId, true)
 
 	reqLogger.Info("Reconcile Complete")
 	return utils.DoNotRequeue()
@@ -151,7 +149,37 @@ func getMostRecentDrainFailedEvent(reqLogger logr.Logger, eventList *corev1.Even
 	return newestEvent
 }
 
-func (r *MachineReconciler) evaluateMachine(ctx context.Context) (ctrl.Result, error) {
+func parsePodsAndNamespacesFromEvent(reqLogger logr.Logger, event *corev1.Event) map[string]string {
+	re := regexp.MustCompile(`pods\/"([\w-]+)" -n "([\w-]+)"`)
+	matches := re.FindAllStringSubmatch(event.Message, -1)
+
+	// store the pod/namespace combinations with the pod as the key because
+	// the pod name _should_ generally be unique, where there may be multiple pods
+	// in each namespace
+	podNamespaces := map[string]string{}
+
+	for _, podMatch := range matches {
+		if len(podMatch) != 3 {
+			// I don't think this should ever happen, but this prevents trying to access indexes
+			// in the match slice that may not exist
+			reqLogger.Error(fmt.Errorf("Could not get the appropriate amount of matches"), "match", podMatch)
+			continue
+		}
+		// From the regex match we'll always get this podMatch slice with the following format:
+		// ['pods/"myPod-aaabbb" -n "namespace"', 'myPod-aaabbb', 'namespace']
+		podName := podMatch[1]
+		podNamespace := podMatch[2]
+
+		namespaceRe := regexp.MustCompile(`openshift-.*`)
+		// We don't generally care about openshift namespaces for customer metrics
+		if !namespaceRe.MatchString(podNamespace) {
+			podNamespaces[podName] = podNamespace
+		}
+	}
+	return podNamespaces
+}
+
+func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context) (ctrl.Result, error) {
 	machine, err := getMachineFromCtx(ctx)
 	if err != nil {
 		return utils.RequeueWithError(err)
@@ -173,6 +201,7 @@ func (r *MachineReconciler) evaluateMachine(ctx context.Context) (ctrl.Result, e
 	reqLogger.Info("Evaluating Deleting Machine")
 
 	machineEventList := &corev1.EventList{}
+	// we only want the events related to the machine that we're reconciling on
 	err = r.Client.List(ctx, machineEventList, &client.ListOptions{Namespace: "openshift-machine-api", FieldSelector: fields.SelectorFromSet(fields.Set{"involvedObject.name": machine.Name})})
 	if err != nil {
 		reqLogger.Error(err, "Unable to query events for machine")
@@ -180,36 +209,23 @@ func (r *MachineReconciler) evaluateMachine(ctx context.Context) (ctrl.Result, e
 	}
 
 	event := getMostRecentDrainFailedEvent(reqLogger, machineEventList)
-	// TODO - do we need to ensure that the event happened within a specific timeframe? Like, within the last 15 minutes or something?
-	re := regexp.MustCompile(`pods\/"([\w-]+)" -n "([\w-]+)"`)
-	matches := re.FindAllStringSubmatch(event.Message, -1)
-
-	// store the pod/namespace combinations with the pod as the key because
-	// the pod name _should_ generally be unique, where there may be multiple pods
-	// in each namespace
-	podNamespaces := map[string]string{}
-
-	for _, podMatch := range matches {
-		if len(podMatch) != 3 {
-			reqLogger.Error(fmt.Errorf("Could not get the appropriate amount of matches"), "match", podMatch)
-			// Not sure how we'd get a match not equaling 3 but we should be cautious here
-			continue
-		}
-		// From the regex match we'll always get this podMatch slice with the following format:
-		// ['pods/"myPod-aaabbb" -n "namespace"', 'myPod-aaabbb', 'namespace']
-		podName := podMatch[1]
-		podNamespace := podMatch[2]
-
-		namespaceRe := regexp.MustCompile(`openshift-.*`)
-		// We don't generally care about openshift namespaces for customer metrics
-		if !namespaceRe.MatchString(podNamespace) {
-			podNamespaces[podName] = podNamespace
-		}
+	if event == nil {
+		reqLogger.Info("No events returned for this machine")
+		// Try again - if there's no drain failures then we just keep requeueing until the machine is deleted and this is a noop
+		return utils.RequeueAfter(5 * time.Minute)
 	}
+	// TODO - do we need to ensure that the event happened within a specific timeframe? Like, within the last 15 minutes or something?
+
+	podNamespaces := parsePodsAndNamespacesFromEvent(reqLogger, event)
 
 	nodeName := machine.Status.NodeRef.Name
 	reqLogger.Info("The following pods are failing to drain from the machine", "node", nodeName, "pods/namespaces", podNamespaces)
 
+	// Update the metrics for this machine
 	r.MetricsAggregator.SetFailingDrainPodsForMachine(machine.Name, podNamespaces, nodeName)
-	return utils.RequeueAfter(1 * time.Minute)
+
+	// Requeue every two minutes, even though the event might not be updated for ~10m we'd rather
+	// retry every few minutes to catch the new event within a few cycles than potentially only
+	// catch the event 9 minutes after it's updated.
+	return utils.RequeueAfter(2 * time.Minute)
 }
