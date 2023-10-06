@@ -96,7 +96,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "osd-metrics-exporter-lock",
-		NewCache:               cache.MultiNamespacedCacheBuilder(watchNamespaces),
+		Cache:                  cache.Options{Namespaces: watchNamespaces},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
