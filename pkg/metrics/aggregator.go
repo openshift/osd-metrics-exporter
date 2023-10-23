@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -223,18 +222,10 @@ func (a *AdoptionMetricsAggregator) SetFailingDrainPodsForMachine(machineName st
 	// when this function is called we update the map value for that machine by entirely replacing it, and then
 	// reset the vector to potentially clear any updated pods, and then loop through all of the machines/pods
 	// to put all of the metrics back.
-	if _, ok := a.drainingMachines[machineName]; !ok {
-		// if the draining machine doesn't exist in the tracking map, create it
-		a.drainingMachines[machineName] = drainingMachine{}
-	}
-	fmt.Printf("Draining Machine Map: %+v", a.drainingMachines)
-
 	a.drainingMachines[machineName] = drainingMachine{
 		nodeName:      nodeName,
 		podNamespaces: podNamespaceMap,
 	}
-
-	fmt.Printf("Draining Machine Map after add: %+v", a.drainingMachines)
 
 	a.podsPreventingNodeDrain.Reset()
 	for machine, machineInfo := range a.drainingMachines {

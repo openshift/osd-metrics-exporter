@@ -220,7 +220,7 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context) (ctrl.R
 	podNamespaces := parsePodsAndNamespacesFromEvent(reqLogger, event)
 
 	nodeName := machine.Status.NodeRef.Name
-	reqLogger.Info("The following pods are failing to drain from the machine", "node", nodeName, "pods/namespaces", podNamespaces)
+	reqLogger.Info("The following non-OpenShift pods are failing to drain from the machine", "node", nodeName, "pods/namespaces", podNamespaces)
 
 	// Update the metrics for this machine
 	r.MetricsAggregator.SetFailingDrainPodsForMachine(machine.Name, podNamespaces, nodeName)
