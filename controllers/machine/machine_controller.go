@@ -49,8 +49,11 @@ type MachineReconciler struct {
 
 // Reconcile reads that state of the cluster for machine objects and makes changes based the contained data
 func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
+	reqLogger := logf.FromContext(ctx)
 	reqLogger.Info("Reconciling Machine")
+	defer func() {
+		reqLogger.Info("Reconcile Complete")
+	}()
 
 	// Fetch the machines in openshift-machine-api
 	machine := &machinev1beta1.Machine{}
@@ -72,8 +75,6 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		ctx = context.WithValue(ctx, "logger", reqLogger)
 		return r.evaluateDeletingMachine(ctx)
 	}
-
-	reqLogger.Info("Reconcile Complete")
 	return utils.DoNotRequeue()
 }
 
