@@ -35,9 +35,8 @@ import (
 
 const (
 	machineNamespace = "openshift-machine-api"
+	logName          = "controller_machine"
 )
-
-var log = logf.Log.WithName("controller_machine")
 
 // MachineReconciler reconciles a Machine object
 type MachineReconciler struct {
@@ -49,7 +48,8 @@ type MachineReconciler struct {
 
 // Reconcile reads that state of the cluster for machine objects and makes changes based the contained data
 func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	reqLogger := logf.FromContext(ctx)
+	reqLogger := logf.FromContext(ctx).WithName(logName)
+	logf.IntoContext(ctx, reqLogger)
 	reqLogger.Info("Reconciling Machine")
 	defer func() {
 		reqLogger.Info("Reconcile Complete")
@@ -151,7 +151,7 @@ func parsePodsAndNamespacesFromEvent(reqLogger logr.Logger, event *corev1.Event)
 }
 
 func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine *machinev1beta1.Machine) (ctrl.Result, error) {
-	reqLogger := logf.FromContext(ctx)
+	reqLogger := logf.FromContext(ctx).WithName(logName)
 
 	// Check Deleting Timestamp. If it's been less than 15m we don't care, requeue for 5m.
 	deletedTime := machine.GetDeletionTimestamp().Time
