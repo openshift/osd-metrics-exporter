@@ -71,9 +71,7 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	if machine != nil && machine.Status.Phase != nil && *machine.Status.Phase == "Deleting" {
 		reqLogger.Info("Found machine in deleting state. Looking for customer pods failing to delete")
-		ctx = context.WithValue(ctx, "machine", machine)
-		ctx = context.WithValue(ctx, "logger", reqLogger)
-		return r.evaluateDeletingMachine(ctx)
+		return r.evaluateDeletingMachine(ctx, machine)
 	}
 	return utils.DoNotRequeue()
 }
@@ -92,34 +90,6 @@ func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&machinev1beta1.Machine{}).
 		Complete(r)
-}
-
-func getMachineFromCtx(ctx context.Context) (*machinev1beta1.Machine, error) {
-	machineRaw := ctx.Value("machine")
-	if machineRaw == nil {
-		return nil, fmt.Errorf("Machine does not exist in context")
-	}
-
-	machine, ok := machineRaw.(*machinev1beta1.Machine)
-	if !ok {
-		return nil, fmt.Errorf("Could not cast machine context value to Machine type")
-	}
-
-	return machine, nil
-}
-
-func getLoggerFromCtx(ctx context.Context) (logr.Logger, error) {
-	loggerRaw := ctx.Value("logger")
-	if loggerRaw == nil {
-		return logr.Logger{}, fmt.Errorf("Logger does not exist in context")
-	}
-
-	logger, ok := loggerRaw.(logr.Logger)
-	if !ok {
-		return logr.Logger{}, fmt.Errorf("Could not cast logger context value to Logger type")
-	}
-
-	return logger, nil
 }
 
 func getMostRecentDrainFailedEvent(reqLogger logr.Logger, eventList *corev1.EventList) *corev1.Event {
@@ -180,16 +150,8 @@ func parsePodsAndNamespacesFromEvent(reqLogger logr.Logger, event *corev1.Event)
 	return podNamespaces
 }
 
-func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context) (ctrl.Result, error) {
-	machine, err := getMachineFromCtx(ctx)
-	if err != nil {
-		return utils.RequeueWithError(err)
-	}
-
-	reqLogger, err := getLoggerFromCtx(ctx)
-	if err != nil {
-		return utils.RequeueWithError(err)
-	}
+func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine *machinev1beta1.Machine) (ctrl.Result, error) {
+	reqLogger := logf.FromContext(ctx)
 
 	// Check Deleting Timestamp. If it's been less than 15m we don't care, requeue for 5m.
 	deletedTime := machine.GetDeletionTimestamp().Time
@@ -203,7 +165,7 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context) (ctrl.R
 
 	machineEventList := &corev1.EventList{}
 	// we only want the events related to the machine that we're reconciling on
-	err = r.Client.List(ctx, machineEventList, &client.ListOptions{Namespace: "openshift-machine-api", FieldSelector: fields.SelectorFromSet(fields.Set{"involvedObject.name": machine.Name})})
+	err := r.Client.List(ctx, machineEventList, &client.ListOptions{Namespace: "openshift-machine-api", FieldSelector: fields.SelectorFromSet(fields.Set{"involvedObject.name": machine.Name})})
 	if err != nil {
 		reqLogger.Error(err, "Unable to query events for machine")
 		return utils.RequeueWithError(err)
