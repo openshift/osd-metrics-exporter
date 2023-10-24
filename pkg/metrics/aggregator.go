@@ -242,9 +242,7 @@ func (a *AdoptionMetricsAggregator) SetFailingDrainPodsForMachine(machineName st
 }
 
 func (a *AdoptionMetricsAggregator) RemoveMachineMetrics(machineName string) {
-	if _, ok := a.drainingMachines[machineName]; ok {
-		delete(a.drainingMachines, machineName)
-	}
+	delete(a.drainingMachines, machineName)
 }
 
 func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
