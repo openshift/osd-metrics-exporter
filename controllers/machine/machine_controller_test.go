@@ -24,7 +24,8 @@ var _ = Describe("MachineController", func() {
 					eventList := &corev1.EventList{
 						Items: []corev1.Event{},
 					}
-					event := getMostRecentDrainFailedEvent(reqLogger, eventList)
+					event, err := getMostRecentDrainFailedEvent(eventList)
+					Expect(err).Should(MatchError(errNoEvents))
 					Expect(event).To(BeNil())
 				})
 				It("handles an event list with no DrainRequeued events", func() {
@@ -35,7 +36,8 @@ var _ = Describe("MachineController", func() {
 						},
 					}
 
-					event := getMostRecentDrainFailedEvent(reqLogger, eventList)
+					event, err := getMostRecentDrainFailedEvent(eventList)
+					Expect(err).To(BeNil())
 					Expect(event).To(BeNil())
 				})
 			})
@@ -58,9 +60,13 @@ var _ = Describe("MachineController", func() {
 					Items: []corev1.Event{pastEvent, newerEvent, newestEvent},
 				}
 
-				newestEventFirst := getMostRecentDrainFailedEvent(reqLogger, newestFirst)
-				newestEventMiddle := getMostRecentDrainFailedEvent(reqLogger, newestMiddle)
-				newestEventLast := getMostRecentDrainFailedEvent(reqLogger, newestLast)
+				newestEventFirst, err1 := getMostRecentDrainFailedEvent(newestFirst)
+				newestEventMiddle, err2 := getMostRecentDrainFailedEvent(newestMiddle)
+				newestEventLast, err3 := getMostRecentDrainFailedEvent(newestLast)
+
+				Expect(err1).To(BeNil())
+				Expect(err2).To(BeNil())
+				Expect(err3).To(BeNil())
 
 				Expect(newestEventFirst).NotTo(BeNil())
 				Expect(newestEventMiddle).NotTo(BeNil())

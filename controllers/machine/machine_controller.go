@@ -55,6 +55,10 @@ const (
 	podFailingDrainRecheckInterval = 2 * time.Minute
 )
 
+var (
+	errNoEvents = fmt.Errorf("No Events")
+)
+
 // MachineReconciler reconciles a Machine object
 type MachineReconciler struct {
 	client.Client
@@ -109,11 +113,10 @@ func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func getMostRecentDrainFailedEvent(reqLogger logr.Logger, eventList *corev1.EventList) *corev1.Event {
+func getMostRecentDrainFailedEvent(eventList *corev1.EventList) (*corev1.Event, error) {
 	// if there are no events at all exit now
 	if len(eventList.Items) == 0 {
-		reqLogger.Info("No events")
-		return nil
+		return nil, errNoEvents
 	}
 
 	var newestEvent *corev1.Event
@@ -132,7 +135,7 @@ func getMostRecentDrainFailedEvent(reqLogger logr.Logger, eventList *corev1.Even
 		}
 	}
 
-	return newestEvent
+	return newestEvent, nil
 }
 
 func parsePodsAndNamespacesFromEvent(reqLogger logr.Logger, event *corev1.Event) map[string]string {
@@ -187,9 +190,18 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine
 		return utils.RequeueWithError(err)
 	}
 
-	event := getMostRecentDrainFailedEvent(reqLogger, machineEventList)
+	event, err := getMostRecentDrainFailedEvent(machineEventList)
+	if err != nil {
+		if err == errNoEvents {
+			reqLogger.Info("No events for this machine")
+			return utils.RequeueAfter(defaultDelayInterval)
+		}
+
+		reqLogger.Info("Unhandled Error getting most recent drain fail event")
+		return utils.RequeueAfter(defaultDelayInterval)
+	}
 	if event == nil {
-		reqLogger.Info("No events returned for this machine")
+		reqLogger.Info("No drainRequeued events for this machine")
 		// Try again - if there's no drain failures then we just keep requeueing until the machine is deleted and this is a noop
 		return utils.RequeueAfter(defaultDelayInterval)
 	}
