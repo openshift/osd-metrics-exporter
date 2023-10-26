@@ -217,6 +217,12 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine
 		return utils.RequeueAfter(defaultDelayInterval)
 	}
 
+	// Make sure this event is happening _after_ the machine deletion and it's not a pre-existing event
+	if machine.DeletionTimestamp.Time.Before(event.LastTimestamp.Time) {
+		reqLogger.Info("Latest event was before machine was deleted, requeueing")
+		return utils.RequeueAfter(defaultDelayInterval)
+	}
+
 	podNamespaces := parsePodsAndNamespacesFromEvent(event)
 	if err != nil {
 		reqLogger.Error(err, "No namespace pod matches from event", "event", event)
