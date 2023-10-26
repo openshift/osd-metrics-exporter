@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/openshift/osd-metrics-exporter/controllers/utils"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
@@ -138,7 +137,7 @@ func getMostRecentDrainFailedEvent(eventList *corev1.EventList) (*corev1.Event, 
 	return newestEvent, nil
 }
 
-func parsePodsAndNamespacesFromEvent(reqLogger logr.Logger, event *corev1.Event) map[string]string {
+func parsePodsAndNamespacesFromEvent(event *corev1.Event) (map[string]string, error) {
 	re := regexp.MustCompile(`pods\/"([\w-]+)" -n "([\w-]+)"`)
 	matches := re.FindAllStringSubmatch(event.Message, -1)
 
@@ -151,7 +150,7 @@ func parsePodsAndNamespacesFromEvent(reqLogger logr.Logger, event *corev1.Event)
 		if len(podMatch) != 3 {
 			// I don't think this should ever happen, but this prevents trying to access indexes
 			// in the match slice that may not exist
-			reqLogger.Error(fmt.Errorf("Could not get the appropriate amount of matches"), "match", podMatch)
+			return podNamespaces, fmt.Errorf("Could not get the appropriate amount of matches")
 			continue
 		}
 		// From the regex match we'll always get this podMatch slice with the following format:
@@ -165,7 +164,7 @@ func parsePodsAndNamespacesFromEvent(reqLogger logr.Logger, event *corev1.Event)
 			podNamespaces[podName] = podNamespace
 		}
 	}
-	return podNamespaces
+	return podNamespaces, nil
 }
 
 func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine *machinev1beta1.Machine) (ctrl.Result, error) {
@@ -196,17 +195,21 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine
 			reqLogger.Info("No events for this machine")
 			return utils.RequeueAfter(defaultDelayInterval)
 		}
-
 		reqLogger.Info("Unhandled Error getting most recent drain fail event")
 		return utils.RequeueAfter(defaultDelayInterval)
 	}
+
 	if event == nil {
 		reqLogger.Info("No drainRequeued events for this machine")
 		// Try again - if there's no drain failures then we just keep requeueing until the machine is deleted and this is a noop
 		return utils.RequeueAfter(defaultDelayInterval)
 	}
 
-	podNamespaces := parsePodsAndNamespacesFromEvent(reqLogger, event)
+	podNamespaces, err := parsePodsAndNamespacesFromEvent(event)
+	if err != nil {
+		reqLogger.Error(err, "No namespace pod matches from event", "event", event)
+		return utils.RequeueAfter(defaultDelayInterval)
+	}
 
 	nodeName := machine.Status.NodeRef.Name
 	reqLogger.Info("The following non-OpenShift pods are failing to drain from the machine", "node", nodeName, "pods/namespaces", podNamespaces)

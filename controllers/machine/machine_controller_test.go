@@ -6,7 +6,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -14,10 +13,6 @@ import (
 var _ = Describe("MachineController", func() {
 
 	Context("When Evaluating a deleting machine for blocking customer workloads", func() {
-		var reqLogger logr.Logger
-		BeforeEach(func() {
-			reqLogger = logr.Discard()
-		})
 		Context("When parsing the list of events firing on a cluster", func() {
 			Context("returns nil when no 'DrainRequeued' events are found", func() {
 				It("handles an empty event list", func() {
@@ -80,23 +75,30 @@ var _ = Describe("MachineController", func() {
 		Context("When parsing the pod names and namespaces from an event", func() {
 			It("should return an empty map if there are no matches", func() {
 				event := &corev1.Event{Message: "Should not match"}
-				pods := parsePodsAndNamespacesFromEvent(reqLogger, event)
+				pods, err := parsePodsAndNamespacesFromEvent(event)
 
+				Expect(err).To(BeNil())
 				Expect(pods).To(BeEmpty())
 			})
 			It("should return the correct amount of matches for a single pod", func() {
 				event := &corev1.Event{Message: "pods/\"customer-pod\" -n \"test\" failed to drain"}
-				pods := parsePodsAndNamespacesFromEvent(reqLogger, event)
+				pods, err := parsePodsAndNamespacesFromEvent(event)
+
+				Expect(err).To(BeNil())
 				Expect(pods).To(HaveLen(1))
 			})
 			It("Should return the correct amount of matches if an openshift-pod is present", func() {
 				event := &corev1.Event{Message: "pods/\"osd-pod\" -n \"openshift-namespace\" does not exist; pods/\"customer-pod\" -n \"test\" failed to drain"}
-				pods := parsePodsAndNamespacesFromEvent(reqLogger, event)
+				pods, err := parsePodsAndNamespacesFromEvent(event)
+
+				Expect(err).To(BeNil())
 				Expect(pods).To(HaveLen(1))
 			})
 			It("Should return the correct amount of matches for multiple pods", func() {
 				event := &corev1.Event{Message: "pods/\"foo\" -n \"bar\" does not exist; pods/\"baz\" -n \"bat\" failed to drain"}
-				pods := parsePodsAndNamespacesFromEvent(reqLogger, event)
+				pods, err := parsePodsAndNamespacesFromEvent(event)
+
+				Expect(err).To(BeNil())
 				Expect(pods).To(HaveLen(2))
 				Expect(pods["foo"]).To(Equal("bar"))
 				Expect(pods["baz"]).To(Equal("bat"))
