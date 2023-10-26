@@ -122,23 +122,32 @@ func getMostRecentDrainFailedEvent(eventList *corev1.EventList) (*corev1.Event, 
 
 	for i := range eventList.Items {
 		event := &eventList.Items[i]
-		if isErrorEvictingPodsEvent(event) {
-			if newestEvent == nil {
-				newestEvent = event
-				continue
-			}
-			if newestEvent.LastTimestamp.Time.Before(event.LastTimestamp.Time) {
-				newestEvent = event
-				continue
-			}
+		if !isErrorEvictingPodsEvent(event) {
+			continue
 		}
+
+		newestEvent = getMostRecentEvent(newestEvent, event)
 	}
 
 	return newestEvent, nil
 }
 
+// isErrorEvictingPodsEvent determinds whether the event was specifically an error
+// evicting the pods
 func isErrorEvictingPodsEvent(event *corev1.Event) bool {
 	return event.Reason == "DrainRequeued" && strings.Contains(event.Message, "error when evicting pods")
+}
+
+// getMostRecentEvent compares the two timestamps and returns the most recently
+// occuring event.
+func getMostRecentEvent(a, b *corev1.Event) *corev1.Event {
+	if a == nil {
+		return b
+	}
+	if a.LastTimestamp.Time.Before(b.LastTimestamp.Time) {
+		return b
+	}
+	return a
 }
 
 func parsePodsAndNamespacesFromEvent(event *corev1.Event) (map[string]string, error) {
