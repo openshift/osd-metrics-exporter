@@ -13,6 +13,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	clustersmgmtv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
+	"github.com/openshift/osd-metrics-exporter/config"
 	"github.com/openshift/osde2e-common/pkg/clients/ocm"
 	"github.com/openshift/osde2e-common/pkg/clients/openshift"
 	"github.com/openshift/osde2e-common/pkg/clients/prometheus"
@@ -121,5 +122,9 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 			Should(BeNumerically("==", 1), "identity_provider metric has not updated")
 	})
 
-	// TODO: ginkgo.It("can be upgraded", ...)
+	ginkgo.It("can be upgraded", func(ctx context.Context) {
+		ginkgo.By("forcing operator upgrade")
+		err := k8s.UpgradeOperator(ctx, config.OperatorName, config.OperatorNamespace)
+		Expect(err).NotTo(HaveOccurred(), "operator upgrade failed")
+	})
 })
