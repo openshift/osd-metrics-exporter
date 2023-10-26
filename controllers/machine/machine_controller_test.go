@@ -75,30 +75,26 @@ var _ = Describe("MachineController", func() {
 		Context("When parsing the pod names and namespaces from an event", func() {
 			It("should return an empty map if there are no matches", func() {
 				event := &corev1.Event{Message: "Should not match"}
-				pods, err := parsePodsAndNamespacesFromEvent(event)
+				pods := parsePodsAndNamespacesFromEvent(event)
 
-				Expect(err).To(BeNil())
 				Expect(pods).To(BeEmpty())
 			})
 			It("should return the correct amount of matches for a single pod", func() {
 				event := &corev1.Event{Message: "pods/\"customer-pod\" -n \"test\" failed to drain"}
-				pods, err := parsePodsAndNamespacesFromEvent(event)
+				pods := parsePodsAndNamespacesFromEvent(event)
 
-				Expect(err).To(BeNil())
 				Expect(pods).To(HaveLen(1))
 			})
 			It("Should return the correct amount of matches if an openshift-pod is present", func() {
 				event := &corev1.Event{Message: "pods/\"osd-pod\" -n \"openshift-namespace\" does not exist; pods/\"customer-pod\" -n \"test\" failed to drain"}
-				pods, err := parsePodsAndNamespacesFromEvent(event)
+				pods := parsePodsAndNamespacesFromEvent(event)
 
-				Expect(err).To(BeNil())
 				Expect(pods).To(HaveLen(1))
 			})
 			It("Should return the correct amount of matches for multiple pods", func() {
 				event := &corev1.Event{Message: "pods/\"foo\" -n \"bar\" does not exist; pods/\"baz\" -n \"bat\" failed to drain"}
-				pods, err := parsePodsAndNamespacesFromEvent(event)
+				pods := parsePodsAndNamespacesFromEvent(event)
 
-				Expect(err).To(BeNil())
 				Expect(pods).To(HaveLen(2))
 				Expect(pods["foo"]).To(Equal("bar"))
 				Expect(pods["baz"]).To(Equal("bat"))

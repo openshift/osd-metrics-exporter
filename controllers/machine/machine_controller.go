@@ -150,7 +150,7 @@ func getMostRecentEvent(a, b *corev1.Event) *corev1.Event {
 	return a
 }
 
-func parsePodsAndNamespacesFromEvent(event *corev1.Event) (map[string]string, error) {
+func parsePodsAndNamespacesFromEvent(event *corev1.Event) map[string]string {
 	re := regexp.MustCompile(`pods\/"([\w-]+)" -n "([\w-]+)"`)
 	matches := re.FindAllStringSubmatch(event.Message, -1)
 
@@ -163,7 +163,6 @@ func parsePodsAndNamespacesFromEvent(event *corev1.Event) (map[string]string, er
 		if len(podMatch) != 3 {
 			// I don't think this should ever happen, but this prevents trying to access indexes
 			// in the match slice that may not exist
-			return podNamespaces, fmt.Errorf("Could not get the appropriate amount of matches")
 			continue
 		}
 		// From the regex match we'll always get this podMatch slice with the following format:
@@ -177,7 +176,7 @@ func parsePodsAndNamespacesFromEvent(event *corev1.Event) (map[string]string, er
 			podNamespaces[podName] = podNamespace
 		}
 	}
-	return podNamespaces, nil
+	return podNamespaces
 }
 
 func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine *machinev1beta1.Machine) (ctrl.Result, error) {
@@ -218,7 +217,7 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine
 		return utils.RequeueAfter(defaultDelayInterval)
 	}
 
-	podNamespaces, err := parsePodsAndNamespacesFromEvent(event)
+	podNamespaces := parsePodsAndNamespacesFromEvent(event)
 	if err != nil {
 		reqLogger.Error(err, "No namespace pod matches from event", "event", event)
 		return utils.RequeueAfter(defaultDelayInterval)
