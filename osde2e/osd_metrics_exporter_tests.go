@@ -41,7 +41,7 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 	ginkgo.BeforeAll(func(ctx context.Context) {
 		log.SetLogger(ginkgo.GinkgoLogr)
 
-		clusterID = os.Getenv("CLUSTER_ID")
+		clusterID = os.Getenv("OCM_CLUSTER_ID")
 		Expect(clusterID).ShouldNot(BeEmpty(), "failed to find CLUSTER_ID environment variable")
 
 		var err error
