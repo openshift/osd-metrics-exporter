@@ -36,6 +36,23 @@ import (
 const (
 	machineNamespace = "openshift-machine-api"
 	logName          = "controller_machine"
+
+	// timeBuffer is the delay between when a machine is deleted to when we want to care
+	// if a customer's pod is not draining before we start emitting metrics. We don't
+	// want to set this too low so that it starts emitting metrics before the pods actually
+	// have a chance to drain and reschedule, but want to set this to a time where it
+	// might be considered a problem for the node to not be draining properly.
+	timeBuffer = 15 * time.Minute
+
+	// defaultDelayInterval is the default time to requeue a machine that's being evaluated
+	// so that it can be evaluated again when there's no active metrics being fired.
+	defaultDelayInterval = 5 * time.Minute
+
+	// podFailingDrainRecheckInterval is the time we re-evaluate a machine that's actively
+	// failing to drain pods. We want this to be less than the default delay interval as
+	// we'll want to recheck this more often once this condition is set in order to more
+	// appropriately resolve once the condition is fixed.
+	podFailingDrainRecheckInterval = 2 * time.Minute
 )
 
 // MachineReconciler reconciles a Machine object
@@ -103,16 +120,14 @@ func getMostRecentDrainFailedEvent(reqLogger logr.Logger, eventList *corev1.Even
 
 	for i := range eventList.Items {
 		event := &eventList.Items[i]
-		if event.Reason == "DrainRequeued" {
-			if strings.Contains(event.Message, "error when evicting pods") {
-				if newestEvent == nil {
-					newestEvent = event
-					continue
-				}
-				if newestEvent.LastTimestamp.Time.Before(event.LastTimestamp.Time) {
-					newestEvent = event
-					continue
-				}
+		if event.Reason == "DrainRequeued" && strings.Contains(event.Message, "error when evicting pods") {
+			if newestEvent == nil {
+				newestEvent = event
+				continue
+			}
+			if newestEvent.LastTimestamp.Time.Before(event.LastTimestamp.Time) {
+				newestEvent = event
+				continue
 			}
 		}
 	}
@@ -153,12 +168,13 @@ func parsePodsAndNamespacesFromEvent(reqLogger logr.Logger, event *corev1.Event)
 func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine *machinev1beta1.Machine) (ctrl.Result, error) {
 	reqLogger := logf.FromContext(ctx).WithName(logName)
 
-	// Check Deleting Timestamp. If it's been less than 15m we don't care, requeue for 5m.
+	// Check Deleting Timestamp.
+	// If it's been less than the timeBuffer we don't care, requeue for the default delay interval.
 	deletedTime := machine.GetDeletionTimestamp().Time
 	now := time.Now()
-	if !deletedTime.Before(now.Add(-15 * time.Minute)) {
+	if !deletedTime.Before(now.Add(-timeBuffer)) {
 		reqLogger.Info("Machine was not deleted long enough ago. Requeueing after 5m.")
-		return utils.RequeueAfter(5 * time.Minute)
+		return utils.RequeueAfter(defaultDelayInterval)
 	}
 
 	reqLogger.Info("Evaluating Deleting Machine")
@@ -175,9 +191,8 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine
 	if event == nil {
 		reqLogger.Info("No events returned for this machine")
 		// Try again - if there's no drain failures then we just keep requeueing until the machine is deleted and this is a noop
-		return utils.RequeueAfter(5 * time.Minute)
+		return utils.RequeueAfter(defaultDelayInterval)
 	}
-	// TODO - do we need to ensure that the event happened within a specific timeframe? Like, within the last 15 minutes or something?
 
 	podNamespaces := parsePodsAndNamespacesFromEvent(reqLogger, event)
 
@@ -190,5 +205,5 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine
 	// Requeue every two minutes, even though the event might not be updated for ~10m we'd rather
 	// retry every few minutes to catch the new event within a few cycles than potentially only
 	// catch the event 9 minutes after it's updated.
-	return utils.RequeueAfter(2 * time.Minute)
+	return utils.RequeueAfter(podFailingDrainRecheckInterval)
 }
