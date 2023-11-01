@@ -36,11 +36,13 @@ import (
 	"github.com/openshift/osd-metrics-exporter/controllers/configmap"
 	"github.com/openshift/osd-metrics-exporter/controllers/group"
 	"github.com/openshift/osd-metrics-exporter/controllers/limited_support"
+	"github.com/openshift/osd-metrics-exporter/controllers/machine"
 	"github.com/openshift/osd-metrics-exporter/controllers/oauth"
 	"github.com/openshift/osd-metrics-exporter/controllers/proxy"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	routev1 "github.com/openshift/api/route/v1"
 	userv1 "github.com/openshift/api/user/v1"
 	promOperatorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -59,6 +61,7 @@ var (
 	watchNamespaces = []string{
 		"openshift-osd-metrics",
 		"openshift-config",
+		"openshift-machine-api",
 	}
 )
 
@@ -67,6 +70,7 @@ func init() {
 
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(configv1.Install(scheme))
+	utilruntime.Must(machinev1beta1.Install(scheme))
 	utilruntime.Must(promOperatorv1.AddToScheme(scheme))
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
 	utilruntime.Must(routev1.Install(scheme))
@@ -145,6 +149,15 @@ func main() {
 		ClusterId:         clusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Limited Support")
+		os.Exit(1)
+	}
+
+	if err = (&machine.MachineReconciler{
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Machine")
 		os.Exit(1)
 	}
 

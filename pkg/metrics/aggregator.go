@@ -36,16 +36,23 @@ type providerKey struct {
 }
 
 type AdoptionMetricsAggregator struct {
-	identityProviders    *prometheus.GaugeVec
-	clusterAdmin         prometheus.GaugeVec
-	limitedSupport       *prometheus.GaugeVec
-	providerMap          map[providerKey][]configv1.IdentityProviderType
-	clusterProxy         *prometheus.GaugeVec
-	clusterProxyCAExpiry *prometheus.GaugeVec
-	clusterProxyCAValid  prometheus.GaugeVec
-	clusterID            *prometheus.GaugeVec
-	mutex                sync.Mutex
-	aggregationInterval  time.Duration
+	identityProviders       *prometheus.GaugeVec
+	clusterAdmin            prometheus.GaugeVec
+	limitedSupport          *prometheus.GaugeVec
+	providerMap             map[providerKey][]configv1.IdentityProviderType
+	clusterProxy            *prometheus.GaugeVec
+	clusterProxyCAExpiry    *prometheus.GaugeVec
+	clusterProxyCAValid     prometheus.GaugeVec
+	clusterID               *prometheus.GaugeVec
+	podsPreventingNodeDrain *prometheus.GaugeVec
+	drainingMachines        map[string]drainingMachine
+	mutex                   sync.Mutex
+	aggregationInterval     time.Duration
+}
+
+type drainingMachine struct {
+	nodeName      string
+	podNamespaces map[string]string
 }
 
 // NewMetricsAggregator creates a metric aggregator. Should not be used directory but through GetMetricsAggregator
@@ -86,9 +93,14 @@ func NewMetricsAggregator(aggregationInterval time.Duration, clusterId string) *
 			Help:        "Indicates the cluster id",
 			ConstLabels: map[string]string{"name": osdExporterValue},
 		}, []string{clusterIDLabel}),
+		podsPreventingNodeDrain: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "pods_preventing_node_drain",
+			Help: "Pods that cannot be drained from a deleting machine",
+		}, []string{"pod_name", "pod_namespace", "instance", "node", "machine"}),
 		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
 	}
+	collector.drainingMachines = map[string]drainingMachine{}
 	collector.SetClusterAdmin(clusterId, false)
 	collector.SetLimitedSupport(clusterId, false)
 	return collector
@@ -204,8 +216,37 @@ func (a *AdoptionMetricsAggregator) SetClusterID(uuid string) {
 	}).Set(1)
 }
 
+func (a *AdoptionMetricsAggregator) SetFailingDrainPodsForMachine(machineName string, podNamespaceMap map[string]string, nodeName string) {
+	// because we might have multiple machines in this state and the machine controller reconciles a single
+	// machine at a time, we keep a map of the machines in the metric aggregator with the failing pods.
+	// when this function is called we update the map value for that machine by entirely replacing it, and then
+	// reset the vector to potentially clear any updated pods, and then loop through all of the machines/pods
+	// to put all of the metrics back.
+	a.drainingMachines[machineName] = drainingMachine{
+		nodeName:      nodeName,
+		podNamespaces: podNamespaceMap,
+	}
+
+	a.podsPreventingNodeDrain.Reset()
+	for machine, machineInfo := range a.drainingMachines {
+		for podName, podNamespace := range machineInfo.podNamespaces {
+			a.podsPreventingNodeDrain.With(prometheus.Labels{
+				"pod_name":      podName,
+				"pod_namespace": podNamespace,
+				"instance":      machineInfo.nodeName,
+				"node":          machineInfo.nodeName,
+				"machine":       machine,
+			}).Set(1)
+		}
+	}
+}
+
+func (a *AdoptionMetricsAggregator) RemoveMachineMetrics(machineName string) {
+	delete(a.drainingMachines, machineName)
+}
+
 func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
-	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.limitedSupport, a.clusterProxy, a.clusterProxyCAExpiry, a.clusterProxyCAValid, a.clusterID}
+	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.limitedSupport, a.clusterProxy, a.clusterProxyCAExpiry, a.clusterProxyCAValid, a.clusterID, a.podsPreventingNodeDrain}
 }
 
 func (a *AdoptionMetricsAggregator) GetClusterRoleMetric() prometheus.GaugeVec {

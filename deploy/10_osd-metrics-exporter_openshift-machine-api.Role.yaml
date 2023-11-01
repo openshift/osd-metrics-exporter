@@ -1,0 +1,16 @@
+# auxiliary permissions needed to run the operator
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: osd-metrics-exporter
+  namespace: openshift-machine-api
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
