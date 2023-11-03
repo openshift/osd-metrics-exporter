@@ -227,6 +227,15 @@ func (a *AdoptionMetricsAggregator) SetFailingDrainPodsForMachine(machineName st
 		podNamespaces: podNamespaceMap,
 	}
 
+	a.resetMachineMetrics()
+}
+
+func (a *AdoptionMetricsAggregator) RemoveMachineMetrics(machineName string) {
+	delete(a.drainingMachines, machineName)
+	a.resetMachineMetrics()
+}
+
+func (a *AdoptionMetricsAggregator) resetMachineMetrics() {
 	a.podsPreventingNodeDrain.Reset()
 	for machine, machineInfo := range a.drainingMachines {
 		for podName, podNamespace := range machineInfo.podNamespaces {
@@ -239,10 +248,6 @@ func (a *AdoptionMetricsAggregator) SetFailingDrainPodsForMachine(machineName st
 			}).Set(1)
 		}
 	}
-}
-
-func (a *AdoptionMetricsAggregator) RemoveMachineMetrics(machineName string) {
-	delete(a.drainingMachines, machineName)
 }
 
 func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
