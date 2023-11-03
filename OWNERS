@@ -8,12 +8,14 @@ reviewers:
 - T0MASD
 - AlexVulaj
 - reedcort
+- maorfr
 approvers:
 - jharrington22
 - dustman9000
 - bdematte
 - dkeohane
 - iamkirkbater
+- maorfr
 maintainers:
 - jharrington22
 - dustman9000
