@@ -218,7 +218,7 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine
 	}
 
 	// Make sure this event is happening _after_ the machine deletion and it's not a pre-existing event
-	if machine.DeletionTimestamp.Time.Before(event.LastTimestamp.Time) {
+	if machine.DeletionTimestamp.Time.After(event.LastTimestamp.Time) {
 		reqLogger.Info("Latest event was before machine was deleted, requeueing")
 		return utils.RequeueAfter(defaultDelayInterval)
 	}
