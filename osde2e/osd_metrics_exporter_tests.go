@@ -27,15 +27,19 @@ import (
 
 var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 	var (
-		clusterID         string
-		k8s               *openshift.Client
-		prom              *prometheus.Client
-		ocmClient         *ocm.Client
-		namespace         = "openshift-osd-metrics"
-		serviceName       = "osd-metrics-exporter"
-		deploymentName    = "osd-metrics-exporter"
-		rolePrefix        = "osd-metrics-exporter"
-		clusterRolePrefix = "osd-metrics-exporter"
+		clusterID               string
+		k8s                     *openshift.Client
+		prom                    *prometheus.Client
+		ocmClient               *ocm.Client
+		passthruSecrets         corev1.Secret
+		namespace               = "openshift-osd-metrics"
+		serviceName             = "osd-metrics-exporter"
+		deploymentName          = "osd-metrics-exporter"
+		rolePrefix              = "osd-metrics-exporter"
+		clusterRolePrefix       = "osd-metrics-exporter"
+		passthruSecretNamespace = "osde2e-ci-secrets"
+		passthruSecretName      = "ci-secrets"
+		ocmTokenSecretKey       = "ocm-token-refresh"
 	)
 
 	ginkgo.BeforeAll(func(ctx context.Context) {
@@ -51,7 +55,14 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 		prom, err = prometheus.New(ctx, k8s)
 		Expect(err).ShouldNot(HaveOccurred(), "unable to setup prometheus client")
 
-		ocmClient, err = ocm.New(ctx, os.Getenv("OCM_TOKEN"), ocm.Stage)
+		// Get passthru secret
+		err = k8s.Get(ctx, passthruSecretName, passthruSecretNamespace, &passthruSecrets)
+		Expect(passthruSecrets.Data).ShouldNot(BeEmpty(), "Failed to get passthru secrets data")
+		Expect(passthruSecrets.Data[ocmTokenSecretKey]).ShouldNot(BeEmpty(), "Failed to get OCM token bytes from passthru secret")
+		ocmtoken := string(passthruSecrets.Data[ocmTokenSecretKey])
+		Expect(ocmtoken).ShouldNot(BeEmpty(), "Failed to get OCM token string from passthru secret")
+
+		ocmClient, err = ocm.New(ctx, ocmtoken, ocm.Stage)
 		Expect(err).ShouldNot(HaveOccurred(), "unable to setup ocm client")
 		ginkgo.DeferCleanup(ocmClient.Connection.Close)
 	})
