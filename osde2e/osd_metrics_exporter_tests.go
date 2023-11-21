@@ -100,7 +100,7 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 		result := results[0].Value
 		Expect(int(result)).Should(BeNumerically("==", 1), "prometheus exporter is not healthy")
 
-		user := clustersmgmtv1.NewHTPasswdIdentityProvider().Username(rand.String(10)).Password(rand.String(10))
+		user := clustersmgmtv1.NewHTPasswdIdentityProvider().Username(rand.String(14)).Password(rand.String(14))
 		idp, err := clustersmgmtv1.NewIdentityProvider().Htpasswd(user).Type(clustersmgmtv1.IdentityProviderTypeHtpasswd).Name("osde2e").Build()
 		Expect(err).ShouldNot(HaveOccurred(), "unable to build htpasswd IDP object")
 
