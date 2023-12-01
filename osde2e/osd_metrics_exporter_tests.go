@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	mathrand "math/rand"
+
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	clustersmgmtv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
@@ -42,7 +44,7 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 		log.SetLogger(ginkgo.GinkgoLogr)
 
 		clusterID = os.Getenv("OCM_CLUSTER_ID")
-		Expect(clusterID).ShouldNot(BeEmpty(), "failed to find CLUSTER_ID environment variable")
+		Expect(clusterID).ShouldNot(BeEmpty(), "failed to find OCM_CLUSTER_ID environment variable")
 
 		var err error
 		k8s, err = openshift.New(ginkgo.GinkgoLogr)
@@ -100,7 +102,8 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 		result := results[0].Value
 		Expect(int(result)).Should(BeNumerically("==", 1), "prometheus exporter is not healthy")
 
-		user := clustersmgmtv1.NewHTPasswdIdentityProvider().Username(rand.String(14)).Password(rand.String(14))
+		user := clustersmgmtv1.NewHTPasswdIdentityProvider().Username(rand.String(14)).Password(generateRandomString(14))
+
 		idp, err := clustersmgmtv1.NewIdentityProvider().Htpasswd(user).Type(clustersmgmtv1.IdentityProviderTypeHtpasswd).Name("osde2e").Build()
 		Expect(err).ShouldNot(HaveOccurred(), "unable to build htpasswd IDP object")
 
@@ -128,3 +131,14 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 		Expect(err).NotTo(HaveOccurred(), "operator upgrade failed")
 	})
 })
+
+// generates password to set up ocm htpasswd auth
+func generateRandomString(length int) string {
+	var charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	var seededRand *mathrand.Rand = mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
+}
