@@ -74,18 +74,6 @@ objects:
             namespace: openshift-osd-metrics
           spec:
             image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
-            affinity:
-              nodeAffinity:
-                preferredDuringSchedulingIgnoredDuringExecution:
-                  - preference:
-                      matchExpressions:
-                        - key: node-role.kubernetes.io/infra
-                          operator: Exists
-                    weight: 1
-            tolerations:
-              - effect: NoSchedule
-                key: node-role.kubernetes.io/infra
-                operator: Exists
             displayName: OSD Metrics Exporter
             icon:
               base64data: ''
@@ -132,7 +120,6 @@ objects:
           roleRef:
             kind: Role
             name: osd-metrics-exporter-watch-configmaps
-            namespace: openshift-config
             apiGroup: rbac.authorization.k8s.io
         - kind: Role
           apiVersion: rbac.authorization.k8s.io/v1
