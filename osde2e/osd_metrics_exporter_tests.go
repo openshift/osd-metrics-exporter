@@ -114,7 +114,7 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 		ginkgo.DeferCleanup(idpClient.IdentityProvider(idpAddResponse.Body().ID()).Delete().SendContext)
 
 		Eventually(ctx, func(ctx context.Context) (int, error) {
-			query := fmt.Sprintf(`identity_provider{provider="HTPasswd", name="osd_exporter", namespace=%q}`, namespace)
+			query := `identity_provider{provider="HTPasswd", name="osd_exporter"}`
 			results, err = prom.InstantQuery(ctx, query)
 			if err != nil {
 				return 0, err
