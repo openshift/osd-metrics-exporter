@@ -133,12 +133,24 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 })
 
 // generates password to set up ocm htpasswd auth
+// Password must include uppercase letters, lowercase letters, and numbers or symbols (ASCII-standard characters only)
 func generateRandomString(length int) string {
-	var charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const (
+		lowers  = "abcdefghijklmnopqrstuvwxyz"
+		uppers  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		numbers = "0123456789"
+	)
 	var seededRand *mathrand.Rand = mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
 	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[seededRand.Intn(len(charset))]
+
+	for i := 0; i < len(b)/3; i++ {
+		b[i] = lowers[seededRand.Intn(len(lowers))]
+	}
+	for i := len(b)/3 + 1; i < 2*len(b)/3; i++ {
+		b[i] = uppers[seededRand.Intn(len(uppers))]
+	}
+	for i := (2 * len(b) / 3) + 1; i < len(b); i++ {
+		b[i] = numbers[seededRand.Intn(len(numbers))]
 	}
 	return string(b)
 }

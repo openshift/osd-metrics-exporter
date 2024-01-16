@@ -4,11 +4,15 @@ go 1.19
 
 require (
 	github.com/google/go-cmp v0.6.0
+	github.com/onsi/ginkgo/v2 v2.9.7
+	github.com/onsi/gomega v1.27.7
+	github.com/openshift-online/ocm-sdk-go v0.1.344
 	// go get github.com/openshift/api@release-4.11
 	github.com/openshift/api v0.0.0-20230426102702-398424d53f74
 	// go get github.com/openshift/cluster-network-operator@release-4.11
 	github.com/openshift/cluster-network-operator v0.0.0-20221129140819-4cbcf0da9cb8
 	github.com/openshift/operator-custom-metrics v0.5.0
+	github.com/openshift/osde2e-common v0.0.0-20231006200548-93749af9460c
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.55.0
 	github.com/prometheus/client_golang v1.15.1
 	github.com/stretchr/testify v1.8.4
@@ -16,13 +20,6 @@ require (
 	k8s.io/apimachinery v0.27.4
 	k8s.io/client-go v0.27.4
 	sigs.k8s.io/controller-runtime v0.15.1
-)
-
-require (
-	github.com/onsi/ginkgo/v2 v2.9.7
-	github.com/onsi/gomega v1.27.7
-	github.com/openshift-online/ocm-sdk-go v0.1.344
-	github.com/openshift/osde2e-common v0.0.0-20231006200548-93749af9460c
 )
 
 require (
