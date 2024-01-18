@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	mathrand "math/rand"
@@ -141,16 +142,17 @@ func generateRandomString(length int) string {
 		numbers = "0123456789"
 	)
 	var seededRand *mathrand.Rand = mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, length)
+	var sb strings.Builder
 
-	for i := 0; i < len(b)/3; i++ {
-		b[i] = lowers[seededRand.Intn(len(lowers))]
+	for i := 0; i < length; i++ {
+		switch i % 3 {
+		case 0:
+			sb.WriteByte(lowers[seededRand.Intn(len(lowers))])
+		case 1:
+			sb.WriteByte(uppers[seededRand.Intn(len(uppers))])
+		case 2:
+			sb.WriteByte(numbers[seededRand.Intn(len(numbers))])
+		}
 	}
-	for i := len(b)/3 + 1; i < 2*len(b)/3; i++ {
-		b[i] = uppers[seededRand.Intn(len(uppers))]
-	}
-	for i := (2 * len(b) / 3) + 1; i < len(b); i++ {
-		b[i] = numbers[seededRand.Intn(len(numbers))]
-	}
-	return string(b)
+	return sb.String()
 }
