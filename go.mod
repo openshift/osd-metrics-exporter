@@ -7,8 +7,8 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.7
 	github.com/onsi/gomega v1.27.7
 	github.com/openshift-online/ocm-sdk-go v0.1.344
-	// go get github.com/openshift/api@release-4.11
-	github.com/openshift/api v0.0.0-20230426102702-398424d53f74
+	// go get github.com/openshift/api@release-4.12
+	github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
 	// go get github.com/openshift/cluster-network-operator@release-4.11
 	github.com/openshift/cluster-network-operator v0.0.0-20221129140819-4cbcf0da9cb8
 	github.com/openshift/operator-custom-metrics v0.5.0

@@ -45,6 +45,7 @@ type AdoptionMetricsAggregator struct {
 	clusterProxyCAValid     prometheus.GaugeVec
 	clusterID               *prometheus.GaugeVec
 	podsPreventingNodeDrain *prometheus.GaugeVec
+	cpms                    *prometheus.GaugeVec
 	drainingMachines        map[string]drainingMachine
 	mutex                   sync.Mutex
 	aggregationInterval     time.Duration
@@ -97,12 +98,18 @@ func NewMetricsAggregator(aggregationInterval time.Duration, clusterId string) *
 			Name: "pods_preventing_node_drain",
 			Help: "Pods that cannot be drained from a deleting machine",
 		}, []string{"pod_name", "pod_namespace", "instance", "node", "machine"}),
+		cpms: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name:        "cpms_enabled",
+			Help:        "Indicates if the controlplanemachineset is enabled",
+			ConstLabels: map[string]string{"name": osdExporterValue},
+		}, []string{clusterIDLabel}),
 		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
 	}
 	collector.drainingMachines = map[string]drainingMachine{}
 	collector.SetClusterAdmin(clusterId, false)
 	collector.SetLimitedSupport(clusterId, false)
+	collector.SetCPMSEnabled(clusterId, false)
 	return collector
 }
 
@@ -210,6 +217,17 @@ func (a *AdoptionMetricsAggregator) SetClusterProxyCAValid(uuid string, valid bo
 	}
 }
 
+func (a *AdoptionMetricsAggregator) SetCPMSEnabled(uuid string, enabled bool) {
+	labels := prometheus.Labels{
+		clusterIDLabel: uuid,
+	}
+	if enabled {
+		a.cpms.With(labels).Set(1)
+	} else {
+		a.cpms.With(labels).Set(0)
+	}
+}
+
 func (a *AdoptionMetricsAggregator) SetClusterID(uuid string) {
 	a.clusterID.With(prometheus.Labels{
 		clusterIDLabel: uuid,
@@ -280,4 +298,8 @@ func (a *AdoptionMetricsAggregator) GetClusterProxyCAExpiryMetrics() *prometheus
 
 func (a *AdoptionMetricsAggregator) GetClusterProxyCAValidMetrics() prometheus.GaugeVec {
 	return a.clusterProxyCAValid
+}
+
+func (a *AdoptionMetricsAggregator) GetCPMSMetric() *prometheus.GaugeVec {
+	return a.cpms
 }
