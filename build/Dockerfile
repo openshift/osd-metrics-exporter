@@ -1,4 +1,4 @@
-FROM quay.io/app-sre/boilerplate:image-v4.0.2 AS builder
+FROM quay.io/app-sre/boilerplate:image-v5.0.0 AS builder
 COPY go.mod /
 COPY go.sum /
 RUN go mod download
@@ -6,7 +6,7 @@ COPY . /osd-metrics-exporter
 WORKDIR /osd-metrics-exporter
 RUN make go-build
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9-1108.1705420507
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9-1137
 ENV OPERATOR=/usr/local/bin/osd-metrics-exporter \
     USER_UID=1001 \
     USER_NAME=osd-metrics-exporter
