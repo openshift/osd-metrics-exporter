@@ -2,20 +2,19 @@ reviewers:
 - jharrington22
 - dustman9000
 - bdematte
-- dkeohane
 - mrWinston
 - bergmannf
-- T0MASD
 - AlexVulaj
 - reedcort
 - maorfr
+- srep-functional-team-orange
 approvers:
 - jharrington22
 - dustman9000
 - bdematte
-- dkeohane
 - iamkirkbater
 - maorfr
+- srep-functional-team-orange
 maintainers:
 - jharrington22
 - dustman9000
