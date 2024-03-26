@@ -6,7 +6,6 @@ package osde2etests
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 	"time"
