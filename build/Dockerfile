@@ -1,4 +1,4 @@
-FROM quay.io/app-sre/boilerplate:image-v4.0.2 AS builder
+FROM quay.io/app-sre/boilerplate:image-v5.0.0 AS builder
 COPY go.mod /
 COPY go.sum /
 RUN go mod download
