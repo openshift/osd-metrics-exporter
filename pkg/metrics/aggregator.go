@@ -269,7 +269,17 @@ func (a *AdoptionMetricsAggregator) resetMachineMetrics() {
 }
 
 func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
-	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.limitedSupport, a.clusterProxy, a.clusterProxyCAExpiry, a.clusterProxyCAValid, a.clusterID, a.podsPreventingNodeDrain}
+	return []prometheus.Collector{
+		a.identityProviders,
+		a.clusterAdmin,
+		a.limitedSupport,
+		a.clusterProxy,
+		a.clusterProxyCAExpiry,
+		a.clusterProxyCAValid,
+		a.clusterID,
+		a.podsPreventingNodeDrain,
+		a.cpms,
+	}
 }
 
 func (a *AdoptionMetricsAggregator) GetClusterRoleMetric() prometheus.GaugeVec {
