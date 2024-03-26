@@ -34,6 +34,7 @@ import (
 	operatorConfig "github.com/openshift/osd-metrics-exporter/config"
 	"github.com/openshift/osd-metrics-exporter/controllers/clusterrole"
 	"github.com/openshift/osd-metrics-exporter/controllers/configmap"
+	"github.com/openshift/osd-metrics-exporter/controllers/cpms"
 	"github.com/openshift/osd-metrics-exporter/controllers/group"
 	"github.com/openshift/osd-metrics-exporter/controllers/limited_support"
 	"github.com/openshift/osd-metrics-exporter/controllers/machine"
@@ -42,6 +43,7 @@ import (
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	routev1 "github.com/openshift/api/route/v1"
 	userv1 "github.com/openshift/api/user/v1"
@@ -67,7 +69,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
+	utilruntime.Must(machinev1.Install(scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(configv1.Install(scheme))
 	utilruntime.Must(machinev1beta1.Install(scheme))
@@ -177,6 +179,16 @@ func main() {
 		ClusterId:         clusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Proxy")
+		os.Exit(1)
+	}
+
+	if err = (&cpms.CPMSReconciler{
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
+		ClusterId:         clusterId,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CPMS")
 		os.Exit(1)
 	}
 
