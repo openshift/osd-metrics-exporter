@@ -56,6 +56,20 @@ type drainingMachine struct {
 	podNamespaces map[string]string
 }
 
+func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
+	return []prometheus.Collector{
+		a.identityProviders,
+		a.clusterAdmin,
+		a.limitedSupport,
+		a.clusterProxy,
+		a.clusterProxyCAExpiry,
+		a.clusterProxyCAValid,
+		a.clusterID,
+		a.podsPreventingNodeDrain,
+		a.cpms,
+	}
+}
+
 // NewMetricsAggregator creates a metric aggregator. Should not be used directory but through GetMetricsAggregator
 func NewMetricsAggregator(aggregationInterval time.Duration, clusterId string) *AdoptionMetricsAggregator {
 	collector := &AdoptionMetricsAggregator{
@@ -266,10 +280,6 @@ func (a *AdoptionMetricsAggregator) resetMachineMetrics() {
 			}).Set(1)
 		}
 	}
-}
-
-func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
-	return []prometheus.Collector{a.identityProviders, a.clusterAdmin, a.limitedSupport, a.clusterProxy, a.clusterProxyCAExpiry, a.clusterProxyCAValid, a.clusterID, a.podsPreventingNodeDrain}
 }
 
 func (a *AdoptionMetricsAggregator) GetClusterRoleMetric() prometheus.GaugeVec {
