@@ -11,6 +11,7 @@ A prometheus exporter to expose metrics about various features used in Openshift
 5. Cluster Proxy CA Expiry Timestamp
 6. Cluster Proxy CA Valid
 7. Cluster ID
+8. ControlPlaneMachineSet State
 
 # Local development without OLM
 
