@@ -95,7 +95,7 @@ func TestReconcileCPMS_Reconcile(t *testing.T) {
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",instance_type="m5.2xlarge",name="osd_exporter"} 1
+cpms_enabled{_id="cluster-id",label_beta_kubernetes_io_instance_type="m5.2xlarge",name="osd_exporter"} 1
 `,
 		},
 		{
@@ -107,7 +107,7 @@ cpms_enabled{_id="cluster-id",instance_type="m5.2xlarge",name="osd_exporter"} 1
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",instance_type="m5.2xlarge",name="osd_exporter"} 0
+cpms_enabled{_id="cluster-id",label_beta_kubernetes_io_instance_type="m5.2xlarge",name="osd_exporter"} 0
 `,
 		},
 		{
@@ -119,7 +119,7 @@ cpms_enabled{_id="cluster-id",instance_type="m5.2xlarge",name="osd_exporter"} 0
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",instance_type="custom-4-16384",name="osd_exporter"} 1
+cpms_enabled{_id="cluster-id",label_beta_kubernetes_io_instance_type="custom-4-16384",name="osd_exporter"} 1
 `,
 		},
 		{
@@ -131,7 +131,7 @@ cpms_enabled{_id="cluster-id",instance_type="custom-4-16384",name="osd_exporter"
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",instance_type="custom-4-16384",name="osd_exporter"} 0
+cpms_enabled{_id="cluster-id",label_beta_kubernetes_io_instance_type="custom-4-16384",name="osd_exporter"} 0
 `,
 		},
 	} {
