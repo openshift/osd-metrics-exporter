@@ -9,13 +9,14 @@ import (
 )
 
 const (
-	providerLabel       = "provider"
-	osdExporterValue    = "osd_exporter"
-	proxyHTTPLabel      = "http"
-	proxyHTTPSLabel     = "https"
-	proxyCALabel        = "trusted_ca"
-	proxyCASubjectLabel = "subject"
-	clusterIDLabel      = "_id"
+	providerLabel         = "provider"
+	osdExporterValue      = "osd_exporter"
+	proxyHTTPLabel        = "http"
+	proxyHTTPSLabel       = "https"
+	proxyCALabel          = "trusted_ca"
+	proxyCASubjectLabel   = "subject"
+	clusterIDLabel        = "_id"
+	cpmsInstanceTypeLabel = "instance_type"
 )
 
 var knownIdentityProviderTypes = []configv1.IdentityProviderType{
@@ -116,14 +117,13 @@ func NewMetricsAggregator(aggregationInterval time.Duration, clusterId string) *
 			Name:        "cpms_enabled",
 			Help:        "Indicates if the controlplanemachineset is enabled",
 			ConstLabels: map[string]string{"name": osdExporterValue},
-		}, []string{clusterIDLabel}),
+		}, []string{clusterIDLabel, cpmsInstanceTypeLabel}),
 		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
 	}
 	collector.drainingMachines = map[string]drainingMachine{}
 	collector.SetClusterAdmin(clusterId, false)
 	collector.SetLimitedSupport(clusterId, false)
-	collector.SetCPMSEnabled(clusterId, false)
 	return collector
 }
 
@@ -231,9 +231,10 @@ func (a *AdoptionMetricsAggregator) SetClusterProxyCAValid(uuid string, valid bo
 	}
 }
 
-func (a *AdoptionMetricsAggregator) SetCPMSEnabled(uuid string, enabled bool) {
+func (a *AdoptionMetricsAggregator) SetCPMSEnabled(uuid string, instance_type string, enabled bool) {
 	labels := prometheus.Labels{
-		clusterIDLabel: uuid,
+		clusterIDLabel:        uuid,
+		cpmsInstanceTypeLabel: instance_type,
 	}
 	if enabled {
 		a.cpms.With(labels).Set(1)

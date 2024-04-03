@@ -15,8 +15,10 @@ package cpms
 
 import (
 	"context"
+	"encoding/json"
 
 	machinev1 "github.com/openshift/api/machine/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/openshift/osd-metrics-exporter/controllers/utils"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -60,10 +62,34 @@ func (r *CPMSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	reqLogger.Info("Found ControlPlaneMachineSet")
-	if cpms.Spec.State == "Active" {
-		r.MetricsAggregator.SetCPMSEnabled(r.ClusterId, true)
+
+	// Fetch the instance type from cpms spec
+	specRaw := cpms.Spec.Template.OpenShiftMachineV1Beta1Machine.Spec.ProviderSpec.Value.Raw
+	var instance_type string
+
+	// the machine template is provider specific
+	if cpms.Spec.Template.OpenShiftMachineV1Beta1Machine.FailureDomains.Platform == "AWS" {
+		machineProviderConfig := machinev1beta1.AWSMachineProviderConfig{}
+		err := json.Unmarshal(specRaw, &machineProviderConfig)
+		if err != nil {
+			reqLogger.Error(err, "failed to unmarshal machine config")
+			return utils.RequeueWithError(err)
+		}
+		instance_type = machineProviderConfig.InstanceType
 	} else {
-		r.MetricsAggregator.SetCPMSEnabled(r.ClusterId, false)
+		machineProviderConfig := machinev1beta1.GCPMachineProviderSpec{}
+		err := json.Unmarshal(specRaw, &machineProviderConfig)
+		if err != nil {
+			reqLogger.Error(err, "failed to unmarshal machine config")
+			return utils.RequeueWithError(err)
+		}
+		instance_type = machineProviderConfig.MachineType
+	}
+
+	if cpms.Spec.State == "Active" {
+		r.MetricsAggregator.SetCPMSEnabled(r.ClusterId, instance_type, true)
+	} else {
+		r.MetricsAggregator.SetCPMSEnabled(r.ClusterId, instance_type, false)
 	}
 	return utils.DoNotRequeue()
 }
