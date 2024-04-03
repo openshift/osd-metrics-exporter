@@ -15,6 +15,7 @@ package cpms
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -22,9 +23,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
 	machinev1 "github.com/openshift/api/machine/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -41,6 +44,41 @@ func makeTestCPMS(name, namespace string, cpmsSpec machinev1.ControlPlaneMachine
 	return cpms
 }
 
+func makeTestMachineSpecAWS() *runtime.RawExtension {
+	bytes, err := json.Marshal(machinev1beta1.AWSMachineProviderConfig{InstanceType: "m5.2xlarge"})
+	if err != nil {
+		return nil
+	}
+	return &runtime.RawExtension{Raw: bytes}
+}
+
+func makeTestMachineSpecGCP() *runtime.RawExtension {
+	bytes, err := json.Marshal(machinev1beta1.GCPMachineProviderSpec{MachineType: "custom-4-16384"})
+	if err != nil {
+		return nil
+	}
+	return &runtime.RawExtension{Raw: bytes}
+}
+
+func makeTestCPMSTemplate(provider string) machinev1.ControlPlaneMachineSetTemplate {
+	var providerSpec machinev1beta1.ProviderSpec
+	var machineTemplate machinev1.OpenShiftMachineV1Beta1MachineTemplate
+	if provider == "aws" {
+		providerSpec = machinev1beta1.ProviderSpec{Value: makeTestMachineSpecAWS()}
+		machineTemplate = machinev1.OpenShiftMachineV1Beta1MachineTemplate{
+			Spec:           machinev1beta1.MachineSpec{ProviderSpec: providerSpec},
+			FailureDomains: machinev1.FailureDomains{Platform: "AWS"},
+		}
+	} else {
+		providerSpec = machinev1beta1.ProviderSpec{Value: makeTestMachineSpecGCP()}
+		machineTemplate = machinev1.OpenShiftMachineV1Beta1MachineTemplate{
+			Spec:           machinev1beta1.MachineSpec{ProviderSpec: providerSpec},
+			FailureDomains: machinev1.FailureDomains{Platform: "GCP"},
+		}
+	}
+	return machinev1.ControlPlaneMachineSetTemplate{MachineType: machinev1.OpenShiftMachineV1Beta1MachineType, OpenShiftMachineV1Beta1Machine: &machineTemplate}
+}
+
 func TestReconcileCPMS_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
 		name                     string
@@ -49,25 +87,51 @@ func TestReconcileCPMS_Reconcile(t *testing.T) {
 		expectedCPMSResults      string
 	}{
 		{
-			name: "with active ControlPlaneMachineSet",
+			name: "with active ControlPlaneMachineSet(aws)",
 			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
-				State: "Active",
+				State:    "Active",
+				Template: makeTestCPMSTemplate("aws"),
 			},
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",name="osd_exporter"} 1
+cpms_enabled{_id="cluster-id",instance_type="m5.2xlarge",name="osd_exporter"} 1
 `,
 		},
 		{
-			name: "with inactive ControlPlaneMachineSet",
+			name: "with inactive ControlPlaneMachineSet(aws)",
 			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
-				State: "Inactive",
+				State:    "Inactive",
+				Template: makeTestCPMSTemplate("aws"),
 			},
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",name="osd_exporter"} 0
+cpms_enabled{_id="cluster-id",instance_type="m5.2xlarge",name="osd_exporter"} 0
+`,
+		},
+		{
+			name: "with active ControlPlaneMachineSet(gcp)",
+			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
+				State:    "Active",
+				Template: makeTestCPMSTemplate("gcp"),
+			},
+			expectedCPMSResults: `
+# HELP cpms_enabled Indicates if the controlplanemachineset is enabled
+# TYPE cpms_enabled gauge
+cpms_enabled{_id="cluster-id",instance_type="custom-4-16384",name="osd_exporter"} 1
+`,
+		},
+		{
+			name: "with inactive ControlPlaneMachineSet(gcp)",
+			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
+				State:    "Inactive",
+				Template: makeTestCPMSTemplate("gcp"),
+			},
+			expectedCPMSResults: `
+# HELP cpms_enabled Indicates if the controlplanemachineset is enabled
+# TYPE cpms_enabled gauge
+cpms_enabled{_id="cluster-id",instance_type="custom-4-16384",name="osd_exporter"} 0
 `,
 		},
 	} {
