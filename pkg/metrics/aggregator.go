@@ -16,7 +16,7 @@ const (
 	proxyCALabel          = "trusted_ca"
 	proxyCASubjectLabel   = "subject"
 	clusterIDLabel        = "_id"
-	cpmsInstanceTypeLabel = "label_beta_kubernetes_io_instance_type"
+	cpmsInstanceTypeLabel = "label_node_kubernetes_io_instance_type"
 )
 
 var knownIdentityProviderTypes = []configv1.IdentityProviderType{

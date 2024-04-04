@@ -16,6 +16,7 @@ package cpms
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
@@ -64,11 +65,20 @@ func (r *CPMSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	reqLogger.Info("Found ControlPlaneMachineSet")
 
 	// Fetch the instance type from cpms spec
+	if cpms.Spec.Template.MachineType != "machines_v1beta1_machine_openshift_io" {
+		err := fmt.Errorf(
+			"unexpected machine type in Spec.Template.MachineType\nWant: 'machines_v1beta1_machine_openshift_io', got: %s",
+			cpms.Spec.Template.MachineType,
+		)
+		reqLogger.Error(err, "failed to fetch instance type from ControlPlaneMachineSet spec")
+		return utils.RequeueWithError(err)
+	}
 	specRaw := cpms.Spec.Template.OpenShiftMachineV1Beta1Machine.Spec.ProviderSpec.Value.Raw
-	var instance_type string
 
+	var instance_type string
+	platform := cpms.Spec.Template.OpenShiftMachineV1Beta1Machine.FailureDomains.Platform
 	// the machine template is provider specific
-	if cpms.Spec.Template.OpenShiftMachineV1Beta1Machine.FailureDomains.Platform == "AWS" {
+	if platform == "AWS" {
 		machineProviderConfig := machinev1beta1.AWSMachineProviderConfig{}
 		err := json.Unmarshal(specRaw, &machineProviderConfig)
 		if err != nil {
@@ -76,7 +86,7 @@ func (r *CPMSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return utils.RequeueWithError(err)
 		}
 		instance_type = machineProviderConfig.InstanceType
-	} else {
+	} else if platform == "GCP" {
 		machineProviderConfig := machinev1beta1.GCPMachineProviderSpec{}
 		err := json.Unmarshal(specRaw, &machineProviderConfig)
 		if err != nil {
@@ -84,6 +94,10 @@ func (r *CPMSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return utils.RequeueWithError(err)
 		}
 		instance_type = machineProviderConfig.MachineType
+	} else {
+		err := fmt.Errorf("unsupported MachineProvider: %s. Supported cloud providers are 'AWS' and 'GCP'", platform)
+		reqLogger.Error(err, "failed to fetch instance type from ControlPlaneMachineSet spec")
+		return utils.RequeueWithError(err)
 	}
 
 	if cpms.Spec.State == "Active" {
