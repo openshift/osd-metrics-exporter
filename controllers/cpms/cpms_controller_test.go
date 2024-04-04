@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
+	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
@@ -33,8 +34,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
-
-const ()
 
 func makeTestCPMS(name, namespace string, cpmsSpec machinev1.ControlPlaneMachineSetSpec) *machinev1.ControlPlaneMachineSet {
 	cpms := &machinev1.ControlPlaneMachineSet{
@@ -60,22 +59,29 @@ func makeTestMachineSpecGCP() *runtime.RawExtension {
 	return &runtime.RawExtension{Raw: bytes}
 }
 
+func makeTestMachineSpecAzure() *runtime.RawExtension {
+	bytes, err := json.Marshal(machinev1beta1.AzureMachineProviderSpec{VMSize: "test"})
+	if err != nil {
+		return nil
+	}
+	return &runtime.RawExtension{Raw: bytes}
+}
+
 func makeTestCPMSTemplate(provider string) machinev1.ControlPlaneMachineSetTemplate {
 	var providerSpec machinev1beta1.ProviderSpec
 	var machineTemplate machinev1.OpenShiftMachineV1Beta1MachineTemplate
-	if provider == "aws" {
+	if provider == "AWS" {
 		providerSpec = machinev1beta1.ProviderSpec{Value: makeTestMachineSpecAWS()}
-		machineTemplate = machinev1.OpenShiftMachineV1Beta1MachineTemplate{
-			Spec:           machinev1beta1.MachineSpec{ProviderSpec: providerSpec},
-			FailureDomains: machinev1.FailureDomains{Platform: "AWS"},
-		}
-	} else {
+	} else if provider == "GCP" {
 		providerSpec = machinev1beta1.ProviderSpec{Value: makeTestMachineSpecGCP()}
-		machineTemplate = machinev1.OpenShiftMachineV1Beta1MachineTemplate{
-			Spec:           machinev1beta1.MachineSpec{ProviderSpec: providerSpec},
-			FailureDomains: machinev1.FailureDomains{Platform: "GCP"},
-		}
+	} else if provider == "Azure" {
+		providerSpec = machinev1beta1.ProviderSpec{Value: makeTestMachineSpecAzure()}
 	}
+	machineTemplate = machinev1.OpenShiftMachineV1Beta1MachineTemplate{
+		Spec:           machinev1beta1.MachineSpec{ProviderSpec: providerSpec},
+		FailureDomains: machinev1.FailureDomains{Platform: configv1.PlatformType(provider)},
+	}
+
 	return machinev1.ControlPlaneMachineSetTemplate{MachineType: machinev1.OpenShiftMachineV1Beta1MachineType, OpenShiftMachineV1Beta1Machine: &machineTemplate}
 }
 
@@ -85,54 +91,75 @@ func TestReconcileCPMS_Reconcile(t *testing.T) {
 		cpmsSpec                 machinev1.ControlPlaneMachineSetSpec
 		expectedClusterIDResults string
 		expectedCPMSResults      string
+		expectError              bool
 	}{
 		{
 			name: "with active ControlPlaneMachineSet(aws)",
 			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
 				State:    "Active",
-				Template: makeTestCPMSTemplate("aws"),
+				Template: makeTestCPMSTemplate("AWS"),
 			},
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",label_beta_kubernetes_io_instance_type="m5.2xlarge",name="osd_exporter"} 1
+cpms_enabled{_id="cluster-id",label_node_kubernetes_io_instance_type="m5.2xlarge",name="osd_exporter"} 1
 `,
+			expectError: false,
 		},
 		{
 			name: "with inactive ControlPlaneMachineSet(aws)",
 			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
 				State:    "Inactive",
-				Template: makeTestCPMSTemplate("aws"),
+				Template: makeTestCPMSTemplate("AWS"),
 			},
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",label_beta_kubernetes_io_instance_type="m5.2xlarge",name="osd_exporter"} 0
+cpms_enabled{_id="cluster-id",label_node_kubernetes_io_instance_type="m5.2xlarge",name="osd_exporter"} 0
 `,
+			expectError: false,
 		},
 		{
 			name: "with active ControlPlaneMachineSet(gcp)",
 			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
 				State:    "Active",
-				Template: makeTestCPMSTemplate("gcp"),
+				Template: makeTestCPMSTemplate("GCP"),
 			},
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",label_beta_kubernetes_io_instance_type="custom-4-16384",name="osd_exporter"} 1
+cpms_enabled{_id="cluster-id",label_node_kubernetes_io_instance_type="custom-4-16384",name="osd_exporter"} 1
 `,
+			expectError: false,
 		},
 		{
 			name: "with inactive ControlPlaneMachineSet(gcp)",
 			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
 				State:    "Inactive",
-				Template: makeTestCPMSTemplate("gcp"),
+				Template: makeTestCPMSTemplate("GCP"),
 			},
 			expectedCPMSResults: `
 # HELP cpms_enabled Indicates if the controlplanemachineset is enabled
 # TYPE cpms_enabled gauge
-cpms_enabled{_id="cluster-id",label_beta_kubernetes_io_instance_type="custom-4-16384",name="osd_exporter"} 0
+cpms_enabled{_id="cluster-id",label_node_kubernetes_io_instance_type="custom-4-16384",name="osd_exporter"} 0
 `,
+			expectError: false,
+		},
+		{
+			name: "with unsupported cloud provider",
+			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
+				State:    "Inactive",
+				Template: makeTestCPMSTemplate("Azure"),
+			},
+			expectError: true,
+		},
+		{
+			name: "with invalid MachineType",
+			cpmsSpec: machinev1.ControlPlaneMachineSetSpec{
+				State:    "Inactive",
+				Template: machinev1.ControlPlaneMachineSetTemplate{MachineType: "i_am_no_machinetype"},
+			},
+			expectError: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -157,6 +184,10 @@ cpms_enabled{_id="cluster-id",label_beta_kubernetes_io_instance_type="custom-4-1
 					Name:      testName,
 				},
 			})
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
 
 			// sleep to allow the aggregator to aggregate metrics in the background
