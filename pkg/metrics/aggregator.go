@@ -236,6 +236,10 @@ func (a *AdoptionMetricsAggregator) SetCPMSEnabled(uuid string, instance_type st
 		clusterIDLabel:        uuid,
 		cpmsInstanceTypeLabel: instance_type,
 	}
+
+	// We need to reset the metric as instance_type can change
+	a.cpms.Reset()
+
 	if enabled {
 		a.cpms.With(labels).Set(1)
 	} else {
