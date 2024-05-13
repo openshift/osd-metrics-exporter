@@ -6,7 +6,7 @@ COPY . /osd-metrics-exporter
 WORKDIR /osd-metrics-exporter
 RUN make go-build
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9-1161
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9-1161.1715068733
 ENV OPERATOR=/usr/local/bin/osd-metrics-exporter \
     USER_UID=1001 \
     USER_NAME=osd-metrics-exporter
