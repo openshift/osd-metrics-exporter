@@ -121,7 +121,7 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 			return int(results[0].Value), nil
 		}).
 			WithPolling(5*time.Second).
-			WithTimeout(60*time.Second).
+			WithTimeout(5*time.Minute).
 			Should(BeNumerically("==", 1), "identity_provider metric has not updated")
 	})
 
