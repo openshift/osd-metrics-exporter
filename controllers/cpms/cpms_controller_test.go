@@ -79,7 +79,7 @@ func makeTestCPMSTemplate(provider string) machinev1.ControlPlaneMachineSetTempl
 	}
 	machineTemplate = machinev1.OpenShiftMachineV1Beta1MachineTemplate{
 		Spec:           machinev1beta1.MachineSpec{ProviderSpec: providerSpec},
-		FailureDomains: machinev1.FailureDomains{Platform: configv1.PlatformType(provider)},
+		FailureDomains: &machinev1.FailureDomains{Platform: configv1.PlatformType(provider)},
 	}
 
 	return machinev1.ControlPlaneMachineSetTemplate{MachineType: machinev1.OpenShiftMachineV1Beta1MachineType, OpenShiftMachineV1Beta1Machine: &machineTemplate}
