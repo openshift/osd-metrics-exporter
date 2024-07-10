@@ -139,7 +139,7 @@ func isErrorEvictingPodsEvent(event *corev1.Event) bool {
 }
 
 // getMostRecentEvent compares the two timestamps and returns the most recently
-// occuring event.
+// occurring event.
 func getMostRecentEvent(a, b *corev1.Event) *corev1.Event {
 	if a == nil {
 		return b
