@@ -69,7 +69,7 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	certBundle, _, err := validation.TrustBundleConfigMap(cfgMap)
 	if err != nil {
-		// Reporting of failed validation is already funneled through CVO via ClusterOperatorDegraded. This is to explicity catch this condition
+		// Reporting of failed validation is already funneled through CVO via ClusterOperatorDegraded. This is to explicitly catch this condition
 		// and handle gracefully rather then causing stacktrace.
 		if strings.Contains(err.Error(), "failed parsing certificate") {
 			reqLogger.Info("failed parsing certificate")
