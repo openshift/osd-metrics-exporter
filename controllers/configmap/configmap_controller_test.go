@@ -15,6 +15,7 @@ package configmap
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -36,6 +37,40 @@ const (
 	openshiftConfig = "openshift-config"
 	caBundleCRT     = "ca-bundle.crt"
 )
+
+var expiredCA = `
+-----BEGIN CERTIFICATE-----
+MIIFYTCCA0mgAwIBAgIUH1izUJplJEtQrGGUh5RyH/X8GFowDQYJKoZIhvcNAQEL
+BQAwQDELMAkGA1UEBhMCWFgxEzARBgNVBAcMCk1lZ2FjaXR5IDExHDAaBgNVBAoM
+E0RlZmF1bHQgQ29tcGFueSBMdGQwHhcNMjQxMTEwMTIxNTU4WhcNMjQxMTExMTIx
+NTU4WjBAMQswCQYDVQQGEwJYWDETMBEGA1UEBwwKTWVnYWNpdHkgMTEcMBoGA1UE
+CgwTRGVmYXVsdCBDb21wYW55IEx0ZDCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCC
+AgoCggIBAIq+1aLpklDeRX88TbHpRIqTCDVZ5PyRVTEJmGDhQbLfLbkOAjht+YBT
+VwpvJelbQAkV4maugmYkOa63av7HidJqsdED3olwKgmY6vGuMpZ8K6gt1TgQ+HbW
+do+1Ur1ixxChXodfOIHNx6opoY0r2a5vKfNbJ7QOcuP0OUwiuPZFrWobpD/w6Hey
+Zv1P/IXaDJeD8jXrtbsnxbB3dA6zg7EXowri9o6nINOIdLf0I/+/mE22z8Dp9+89
+pEyIUIt1aY6kJZ5Yd78UNRUEDXJ1849czQaoaClWPFB/2KCgp8ZrZtm3U6Cj6bBy
+Aei3pj6SDkubRqdGzeMrGPBhturIiRnQwLbV8LU6uH6mQXL1I3AABkdhsgoJqWdN
+KiHOHfOmNpV+q06t+VSmpMvs7Nhhk89XfMy7KgUoMYm+1fckZu3Qj0cp99FDbNcR
+gvPO9zPghXx/kh27PU2FXwZs27OSJOozAXtJmag77ZMINuyHOWSkUm/t6JJGO/Ca
+Q8J84anC4ksZq7zIyPaKO6DQx6YGHS2MRT4wvu+1fxv0zw2FDTrlwpAF/healdwk
+8Viw23+zjYS3qdG0TGVNqt9PAkt0YHYA0NqTWBIIGVvAPFHTmoiCoywCtBIZIOIO
+YTeJmnDoJYQS3ox5ZKxJTLDwhs3zPNcWrRgcsvoFf9CpHqId1TUXAgMBAAGjUzBR
+MB0GA1UdDgQWBBS6XfsAbTru+mJOComvyWOUUlpsgzAfBgNVHSMEGDAWgBS6XfsA
+bTru+mJOComvyWOUUlpsgzAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUA
+A4ICAQAB0b8DXNFcNCTskKEOwHQpLKYTmNQgcMKPMIbSS59+BYe4jIdlPyraF1FB
+qr+VcFVGmBu6OhcW8S/6X4CvmO5aOn+ZV1NaTE1syNmLZHKXbKJai6D/FbJI1cTD
+AWiIZ0Wn9i6O1PIzw49om48MuGwpCjTtX1pgoPVlzxuG/XxnxL+VcfB/YbNRdX8/
+zamCucAhhXexv2qM7hYFBMoiJ9NgoLzQ0R3keYehH6EL1FBgcvFfSDh/cUTyx2cH
+jLXb0cig/XqKQ/i/VmkEGor/mZqXEP0luZSJGkVZgQUdEr7ENRLhjmpR5+KVwmPI
+vAuapuahdxVM7CGoEPB/MHjWk4rxe45aIuRSpXIWbjILC9fTueyO+Cg3sgCXeCcY
+78ZuQlm8Ov3OR5vZ1C5GNxtTYVqYtrUJgi4EHWa7VkI5izBEsLNqJn2aHRNKZIi5
+6FegC5yo3biAmygl3jCEKY8eX2ETqRFBjFre1SVuv6bFIP0ttMGlU7Q6cFtY9vIV
+U/NylDQhl5qYGXHwpQowoWxAg4a6vbceyC5N+pmNvIKRSODGhWEkjPIfjLKustxa
++WUlM1VPRd9vyaj2N6HY5lh1rreNInhFw+3WkcCDMMXzEoK3QXRKBSNyGWaxXwtu
+0q3qZJJFPJIxFY87bYXkO09r5oNjXoYdfO+toIhBcpk7N3rDoQ==
+-----END CERTIFICATE-----
+`
 
 var testCA = `
 -----BEGIN CERTIFICATE-----
@@ -91,20 +126,41 @@ func makeTestCAData(k string, v string) map[string]string {
 
 func TestReconcileConfigMap_Reconcile(t *testing.T) {
 	for _, tc := range []struct {
-		name            string
-		cfgMapData      map[string]string
-		expectedResults string
-		clusterId       string
+		name                  string
+		cfgMapData            map[string]string
+		expectedExpireResults string
+		expectedValidResults  string
+		clusterId             string
 	}{
 		{
 			clusterId:  "i-am-a-cluster-id",
 			name:       "user-ca-bundle exists",
 			cfgMapData: makeTestCAData(caBundleCRT, testCA),
-			expectedResults: `
+			expectedExpireResults: `
 # HELP cluster_proxy_ca_expiry_timestamp Indicates cluster proxy CA expiry unix timestamp in UTC
 # TYPE cluster_proxy_ca_expiry_timestamp gauge
 cluster_proxy_ca_expiry_timestamp{_id="i-am-a-cluster-id", name="osd_exporter",subject="O=Default Company Ltd,L=Default City,C=XX"} 1.734086723e+09
 `,
+			expectedValidResults: `
+# HELP cluster_proxy_ca_valid Indicates if cluster proxy CA valid
+# TYPE cluster_proxy_ca_valid gauge
+cluster_proxy_ca_valid{_id="i-am-a-cluster-id", name="osd_exporter"} 1
+`,
+		},
+		{
+			name:       "user-ca-bundle with expired cert",
+			cfgMapData: makeTestCAData(caBundleCRT, expiredCA),
+			expectedExpireResults: `
+# HELP cluster_proxy_ca_expiry_timestamp Indicates cluster proxy CA expiry unix timestamp in UTC
+# TYPE cluster_proxy_ca_expiry_timestamp gauge
+cluster_proxy_ca_expiry_timestamp{_id="i-am-a-cluster-id", name="osd_exporter",subject="O=Default Company Ltd,L=Megacity 1,C=XX"} 1.731327358e+09
+`,
+			expectedValidResults: `
+# HELP cluster_proxy_ca_valid Indicates if cluster proxy CA valid
+# TYPE cluster_proxy_ca_valid gauge
+cluster_proxy_ca_valid{_id="i-am-a-cluster-id", name="osd_exporter"} 1
+`,
+			clusterId: "i-am-a-cluster-id",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -135,8 +191,11 @@ cluster_proxy_ca_expiry_timestamp{_id="i-am-a-cluster-id", name="osd_exporter",s
 			var testCfgMap corev1.ConfigMap
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: userCABundle, Namespace: openshiftConfig}, &testCfgMap)
 			require.NoError(t, err)
-			metric := metricsAggregator.GetClusterProxyCAExpiryMetrics()
-			err = testutil.CollectAndCompare(metric, strings.NewReader(tc.expectedResults))
+			expire_metric := metricsAggregator.GetClusterProxyCAExpiryMetrics()
+			valid_metric := metricsAggregator.GetClusterProxyCAValidMetrics()
+			err = testutil.CollectAndCompare(expire_metric, strings.NewReader(tc.expectedExpireResults))
+			require.NoError(t, err)
+			err = testutil.CollectAndCompare(valid_metric, strings.NewReader(tc.expectedValidResults))
 			require.NoError(t, err)
 		})
 	}
@@ -188,6 +247,88 @@ cluster_proxy_ca_valid{_id="i-am-a-cluster-id", name="osd_exporter"} 0
 			require.NoError(t, err)
 			metric := metricsAggregator.GetClusterProxyCAValidMetrics()
 			err = testutil.CollectAndCompare(metric, strings.NewReader(tc.expectedResults))
+			require.NoError(t, err)
+		})
+	}
+}
+
+// This test will simulate a customer fixing an invalid CA in between Reconcile runs:
+// 1. Run with an invalid CA present
+// 2. Remove the CA from the ConfigMap
+// 3. Rerun the Reconcile
+// 4. Ensure the Metric is gone
+func TestReconcileConfigMapModifiedCA_Reconcile(t *testing.T) {
+	for _, tc := range []struct {
+		name                                 string
+		expectedExpireResultsFirstReconcile  string
+		expectedExpireResultsSecondReconcile string
+		clusterId                            string
+	}{
+		{
+			name: "user-ca-bundle with expired cert",
+			expectedExpireResultsFirstReconcile: `
+# HELP cluster_proxy_ca_expiry_timestamp Indicates cluster proxy CA expiry unix timestamp in UTC
+# TYPE cluster_proxy_ca_expiry_timestamp gauge
+cluster_proxy_ca_expiry_timestamp{_id="i-am-a-cluster-id", name="osd_exporter",subject="O=Default Company Ltd,L=Default City,C=XX"} 1.734086723e+09
+cluster_proxy_ca_expiry_timestamp{_id="i-am-a-cluster-id", name="osd_exporter",subject="O=Default Company Ltd,L=Megacity 1,C=XX"} 1.731327358e+09
+`,
+			expectedExpireResultsSecondReconcile: `
+# HELP cluster_proxy_ca_expiry_timestamp Indicates cluster proxy CA expiry unix timestamp in UTC
+# TYPE cluster_proxy_ca_expiry_timestamp gauge
+cluster_proxy_ca_expiry_timestamp{_id="i-am-a-cluster-id", name="osd_exporter",subject="O=Default Company Ltd,L=Default City,C=XX"} 1.734086723e+09
+`,
+			clusterId: "i-am-a-cluster-id",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			metricsAggregator := metrics.NewMetricsAggregator(time.Second, tc.clusterId)
+			done := metricsAggregator.Run()
+			defer close(done)
+			err := corev1.AddToScheme(scheme.Scheme)
+			require.NoError(t, err)
+
+			var testCfgMap corev1.ConfigMap
+			configMapRef := types.NamespacedName{
+				Namespace: openshiftConfig,
+				Name:      userCABundle,
+			}
+
+			testConfigMap := makeTestConfigMap(userCABundle, openshiftConfig, makeTestCAData(caBundleCRT, fmt.Sprintf("%s\n%s", testCA, expiredCA)))
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(testConfigMap).Build()
+			reconciler := ConfigMapReconciler{
+				Client:            fakeClient,
+				MetricsAggregator: metricsAggregator,
+				ClusterId:         tc.clusterId,
+			}
+			result, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
+				NamespacedName: configMapRef,
+			})
+
+			// sleep to allow the aggregator to aggregate metrics in the background
+			time.Sleep(time.Second * 3)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			err = fakeClient.Get(context.Background(), configMapRef, &testCfgMap)
+			require.NoError(t, err)
+			expire_metric := metricsAggregator.GetClusterProxyCAExpiryMetrics()
+			err = testutil.CollectAndCompare(expire_metric, strings.NewReader(tc.expectedExpireResultsFirstReconcile))
+			require.NoError(t, err)
+
+			testConfigMap = makeTestConfigMap(userCABundle, openshiftConfig, makeTestCAData(caBundleCRT, testCA))
+			err = fakeClient.Update(context.TODO(), testConfigMap)
+			require.NoError(t, err)
+			result, err = reconciler.Reconcile(context.TODO(), ctrl.Request{
+				NamespacedName: configMapRef,
+			})
+
+			// sleep to allow the aggregator to aggregate metrics in the background
+			time.Sleep(time.Second * 3)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			err = fakeClient.Get(context.Background(), configMapRef, &testCfgMap)
+			require.NoError(t, err)
+			expire_metric = metricsAggregator.GetClusterProxyCAExpiryMetrics()
+			err = testutil.CollectAndCompare(expire_metric, strings.NewReader(tc.expectedExpireResultsSecondReconcile))
 			require.NoError(t, err)
 		})
 	}
