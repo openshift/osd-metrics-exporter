@@ -52,6 +52,11 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling ConfigMap")
 
+	// Initially reset the metric - old certificates might have been removed
+	// (that were invalid), and not be part of the bundle anymore at all.
+	r.MetricsAggregator.ResetClusterProxyCAExpiry()
+	r.MetricsAggregator.ResetClusterProxyCAValid()
+
 	// Fetch the ConfigMap openshift-config/user-ca-bundle
 	cfgMap := &corev1.ConfigMap{}
 	ns := names.ADDL_TRUST_BUNDLE_CONFIGMAP_NS

@@ -213,11 +213,21 @@ func (a *AdoptionMetricsAggregator) SetClusterProxy(uuid string, proxyHTTP strin
 	}).Set(float64(proxyEnabled))
 }
 
+// This must be called before setting the new validity of the proxy CA.
+func (a *AdoptionMetricsAggregator) ResetClusterProxyCAExpiry() {
+	a.clusterProxyCAExpiry.Reset()
+}
+
 func (a *AdoptionMetricsAggregator) SetClusterProxyCAExpiry(uuid string, subject string, clusterProxyCAExpiry int64) {
 	a.clusterProxyCAExpiry.With(prometheus.Labels{
 		clusterIDLabel:      uuid,
 		proxyCASubjectLabel: subject,
 	}).Set(float64(clusterProxyCAExpiry))
+}
+
+// This must be called before setting the new validity of the proxy CA.
+func (a *AdoptionMetricsAggregator) ResetClusterProxyCAValid() {
+	a.clusterProxyCAValid.Reset()
 }
 
 func (a *AdoptionMetricsAggregator) SetClusterProxyCAValid(uuid string, valid bool) {
