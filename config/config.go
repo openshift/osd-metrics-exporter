@@ -14,6 +14,7 @@ limitations under the License.
 package config
 
 const (
-	OperatorName      = "osd-metrics-exporter"
-	OperatorNamespace = "openshift-osd-metrics"
+	OperatorName       = "osd-metrics-exporter"
+	OperatorNamespace  = "openshift-osd-metrics"
+	EnableOLMSkipRange = "true"
 )
