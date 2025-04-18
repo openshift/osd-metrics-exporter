@@ -21,11 +21,11 @@ A prometheus exporter to expose metrics about various features used in Openshift
 for k in "Namespace" "Role" "RoleBinding"; do;
   k=$k yq '.objects[].spec.resources[] | select(.kind==strenv(k))' \
     hack/olm-registry/olm-artifacts-template.yaml \
-    | oc apply -f - ; 
+    | oc apply -f - ;
 done
 ```
 
-2. Create `(Cluster-)Role`, `(Cluster-)RoleBinding` and `ServiceAccount`. 
+2. Create `(Cluster-)Role`, `(Cluster-)RoleBinding` and `ServiceAccount`.
 
 ```shell
 oc apply -f ./deploy/10_osd-metrics-exporter.ClusterRole.yaml
@@ -57,5 +57,21 @@ oc project openshift-osd-metrics
 ```shell
 make go-build
 ./build/_output/bin/osd-metrics-exporter
+```
+
+# Running Tests Locally
+
+Note that the tests expect that two environment variables are set for the tests to be able to run.  The suite will quickly fail if these are unset:
+
+- `OCM_TOKEN`
+- `OCM_CLUSTER_ID`
+
+Here is an example of running the tests in a local environment:
+
+```bash
+$ cd <PROJECT_ROOT>/test/e2e/
+$ export OCM_TOKEN=$(ocm token)
+$ export OCM_CLUSTER_ID=<YOUR-CLUSTER-ID>
+$ DISABLE_JUNIT_REPORT=true ginkgo run --tags=osde2e,e2e --procs 4 --flake-attempts 3 --trace -vv .
 ```
 
