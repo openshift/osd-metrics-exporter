@@ -53,7 +53,18 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 		prom, err = prometheus.New(ctx, k8s)
 		Expect(err).ShouldNot(HaveOccurred(), "unable to setup prometheus client")
 
-		ocmClient, err = ocm.New(ctx, os.Getenv("OCM_TOKEN"), ocm.Stage)
+		var ocmUrl ocm.Environment
+
+		switch os.Getenv("OCM_ENV") {
+		case "stage":
+			ocmUrl = ocm.Stage
+		case "int":
+			ocmUrl = ocm.Integration
+		default:
+			ginkgo.Fail("Unexpected OCM_ENV - use 'stage' or 'int'")
+		}
+
+		ocmClient, err = ocm.New(ctx, os.Getenv("OCM_TOKEN"), ocmUrl)
 		Expect(err).ShouldNot(HaveOccurred(), "unable to setup ocm client")
 		ginkgo.DeferCleanup(ocmClient.Connection.Close)
 	})
