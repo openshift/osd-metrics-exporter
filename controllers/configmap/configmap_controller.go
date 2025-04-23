@@ -60,7 +60,7 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Fetch the ConfigMap openshift-config/user-ca-bundle
 	cfgMap := &corev1.ConfigMap{}
 	ns := names.ADDL_TRUST_BUNDLE_CONFIGMAP_NS
-	err := r.Client.Get(ctx, types.NamespacedName{Namespace: ns, Name: userCABundleConfigMapName}, cfgMap)
+	err := r.Get(ctx, types.NamespacedName{Namespace: ns, Name: userCABundleConfigMapName}, cfgMap)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

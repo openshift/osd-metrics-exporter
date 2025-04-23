@@ -70,11 +70,12 @@ func makeTestMachineSpecAzure() *runtime.RawExtension {
 func makeTestCPMSTemplate(provider string) machinev1.ControlPlaneMachineSetTemplate {
 	var providerSpec machinev1beta1.ProviderSpec
 	var machineTemplate machinev1.OpenShiftMachineV1Beta1MachineTemplate
-	if provider == "AWS" {
+	switch provider {
+	case "AWS":
 		providerSpec = machinev1beta1.ProviderSpec{Value: makeTestMachineSpecAWS()}
-	} else if provider == "GCP" {
+	case "GCP":
 		providerSpec = machinev1beta1.ProviderSpec{Value: makeTestMachineSpecGCP()}
-	} else if provider == "Azure" {
+	case "Azure":
 		providerSpec = machinev1beta1.ProviderSpec{Value: makeTestMachineSpecAzure()}
 	}
 	machineTemplate = machinev1.OpenShiftMachineV1Beta1MachineTemplate{

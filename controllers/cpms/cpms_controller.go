@@ -52,7 +52,7 @@ func (r *CPMSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}()
 	// Fetch cpms
 	cpms := &machinev1.ControlPlaneMachineSet{}
-	err := r.Client.Get(ctx, client.ObjectKey{Namespace: cpmsNamespace, Name: cpmsName}, cpms)
+	err := r.Get(ctx, client.ObjectKey{Namespace: cpmsNamespace, Name: cpmsName}, cpms)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info("ControlPlaneMachineSet not found.")
@@ -78,7 +78,8 @@ func (r *CPMSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	var instance_type string
 	platform := cpms.Spec.Template.OpenShiftMachineV1Beta1Machine.FailureDomains.Platform
 	// the machine template is provider specific
-	if platform == "AWS" {
+	switch platform {
+	case "AWS":
 		machineProviderConfig := machinev1beta1.AWSMachineProviderConfig{}
 		err := json.Unmarshal(specRaw, &machineProviderConfig)
 		if err != nil {
@@ -86,7 +87,7 @@ func (r *CPMSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return utils.RequeueWithError(err)
 		}
 		instance_type = machineProviderConfig.InstanceType
-	} else if platform == "GCP" {
+	case "GCP":
 		machineProviderConfig := machinev1beta1.GCPMachineProviderSpec{}
 		err := json.Unmarshal(specRaw, &machineProviderConfig)
 		if err != nil {
@@ -94,7 +95,7 @@ func (r *CPMSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return utils.RequeueWithError(err)
 		}
 		instance_type = machineProviderConfig.MachineType
-	} else {
+	default:
 		err := fmt.Errorf("unsupported MachineProvider: %s. Supported cloud providers are 'AWS' and 'GCP'", platform)
 		reqLogger.Error(err, "failed to fetch instance type from ControlPlaneMachineSet spec")
 		return utils.RequeueWithError(err)

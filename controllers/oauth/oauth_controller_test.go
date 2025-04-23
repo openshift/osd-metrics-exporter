@@ -150,7 +150,7 @@ func TestReconcileOAuth_Reconcile(t *testing.T) {
 			var testOAuth configv1.OAuth
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: testName, Namespace: testNamespace}, &testOAuth)
 			require.NoError(t, err)
-			require.Contains(t, testOAuth.ObjectMeta.Finalizers, finalizer)
+			require.Contains(t, testOAuth.Finalizers, finalizer)
 			metric := metricsAggregator.GetIdentityProviderMetric()
 			for p, v := range tc.expectedResult {
 				val := testutil.ToFloat64(metric.With(prometheus.Labels{providerLabel: string(p)}))

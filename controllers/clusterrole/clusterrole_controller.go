@@ -54,7 +54,7 @@ func (r *ClusterRoleReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Fetch the ClusterRole instance
 	instance := &rbacv1.ClusterRole{}
-	err := r.Client.Get(ctx, req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -71,9 +71,9 @@ func (r *ClusterRoleReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, fmt.Errorf("received unknown cluster role: %s", instance.Name)
 	}
 
-	if utils.ContainsString(instance.ObjectMeta.Finalizers, finalizer) {
+	if utils.ContainsString(instance.Finalizers, finalizer) {
 		controllerutil.RemoveFinalizer(instance, finalizer)
-		if err := r.Client.Update(context.Background(), instance); err != nil {
+		if err := r.Update(context.Background(), instance); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

@@ -50,7 +50,7 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 
 	// Fetch the ConfigMap openshift-osd-metrics/limited-support
 	cfgMap := &corev1.ConfigMap{}
-	err := r.Client.Get(ctx, types.NamespacedName{Namespace: limitedSupportConfigMapNamespace, Name: limitedSupportConfigMapName}, cfgMap)
+	err := r.Get(ctx, types.NamespacedName{Namespace: limitedSupportConfigMapNamespace, Name: limitedSupportConfigMapName}, cfgMap)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

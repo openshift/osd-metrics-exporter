@@ -55,7 +55,7 @@ const (
 )
 
 var (
-	errNoEvents = fmt.Errorf("No Events")
+	errNoEvents = fmt.Errorf("no events")
 )
 
 // MachineReconciler reconciles a Machine object
@@ -77,7 +77,7 @@ func (r *MachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Fetch the machines in openshift-machine-api
 	machine := &machinev1beta1.Machine{}
-	err := r.Client.Get(ctx, client.ObjectKey{Namespace: machineNamespace, Name: req.Name}, machine)
+	err := r.Get(ctx, client.ObjectKey{Namespace: machineNamespace, Name: req.Name}, machine)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info("Machine not found. Ensuring that no metrics for this machine are leftover")
@@ -195,7 +195,7 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine
 
 	machineEventList := &corev1.EventList{}
 	// we only want the events related to the machine that we're reconciling on
-	err := r.Client.List(ctx, machineEventList, &client.ListOptions{Namespace: "openshift-machine-api", FieldSelector: fields.SelectorFromSet(fields.Set{"involvedObject.name": machine.Name})})
+	err := r.List(ctx, machineEventList, &client.ListOptions{Namespace: "openshift-machine-api", FieldSelector: fields.SelectorFromSet(fields.Set{"involvedObject.name": machine.Name})})
 	if err != nil {
 		reqLogger.Error(err, "Unable to query events for machine")
 		return utils.RequeueWithError(err)
@@ -218,7 +218,7 @@ func (r *MachineReconciler) evaluateDeletingMachine(ctx context.Context, machine
 	}
 
 	// Make sure this event is happening _after_ the machine deletion and it's not a pre-existing event
-	if machine.DeletionTimestamp.Time.After(event.LastTimestamp.Time) {
+	if machine.DeletionTimestamp.After(event.LastTimestamp.Time) {
 		reqLogger.Info("Latest event was before machine was deleted, requeueing")
 		return utils.RequeueAfter(defaultDelayInterval)
 	}

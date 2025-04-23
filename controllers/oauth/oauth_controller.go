@@ -50,7 +50,7 @@ func (r *OAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	// Fetch the OAuth instance
 	instance := &configv1.OAuth{}
-	err := r.Client.Get(ctx, req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -62,18 +62,18 @@ func (r *OAuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !utils.ContainsString(instance.ObjectMeta.Finalizers, finalizer) {
+	if instance.DeletionTimestamp.IsZero() {
+		if !utils.ContainsString(instance.Finalizers, finalizer) {
 			controllerutil.AddFinalizer(instance, finalizer)
-			if err := r.Client.Update(ctx, instance); err != nil {
+			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 		r.MetricsAggregator.SetOAuthIDP(instance.Name, instance.Namespace, instance.Spec.IdentityProviders)
 	} else {
-		if utils.ContainsString(instance.ObjectMeta.Finalizers, finalizer) {
+		if utils.ContainsString(instance.Finalizers, finalizer) {
 			controllerutil.RemoveFinalizer(instance, finalizer)
-			if err := r.Client.Update(ctx, instance); err != nil {
+			if err := r.Update(ctx, instance); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
