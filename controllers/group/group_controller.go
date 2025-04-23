@@ -52,7 +52,7 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	// Fetch the Group group
 	group := &userv1.Group{}
-	err := r.Client.Get(ctx, req.NamespacedName, group)
+	err := r.Get(ctx, req.NamespacedName, group)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -63,10 +63,10 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
-	if group.ObjectMeta.DeletionTimestamp.IsZero() {
+	if group.DeletionTimestamp.IsZero() {
 		if !utils.ContainsString(group.Finalizers, finalizer) {
 			controllerutil.AddFinalizer(group, finalizer)
-			if err := r.Client.Update(ctx, group); err != nil {
+			if err := r.Update(ctx, group); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -75,7 +75,7 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		r.MetricsAggregator.SetClusterAdmin(r.ClusterId, false)
 		if utils.ContainsString(group.Finalizers, finalizer) {
 			controllerutil.RemoveFinalizer(group, finalizer)
-			if err := r.Client.Update(ctx, group); err != nil {
+			if err := r.Update(ctx, group); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
