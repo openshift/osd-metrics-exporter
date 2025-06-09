@@ -1,20 +1,11 @@
 reviewers:
-- jharrington22
-- dustman9000
-- bdematte
-- mrWinston
-- bergmannf
-- reedcort
-- srep-functional-team-orange
+- srep-functional-team-rocket
 approvers:
-- jharrington22
-- dustman9000
-- bdematte
-- iamkirkbater
-- srep-functional-team-orange
+- srep-functional-team-rocket
 - srep-functional-leads
 - srep-team-leads
 maintainers:
 - jharrington22
+- clcollins
 - dustman9000
 - bdematte
