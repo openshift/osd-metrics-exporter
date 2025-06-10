@@ -64,7 +64,11 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 			ginkgo.Fail("Unexpected OCM_ENV - use 'stage' or 'int'")
 		}
 
-		ocmClient, err = ocm.New(ctx, os.Getenv("OCM_TOKEN"), ocmUrl)
+		ocmClient, err = ocm.New(ctx,
+			os.Getenv("OCM_TOKEN"),
+			os.Getenv("OCM_CLIENT_ID"),
+			os.Getenv("OCM_CLIENT_SECRET"),
+			ocmUrl)
 		Expect(err).ShouldNot(HaveOccurred(), "unable to setup ocm client")
 		ginkgo.DeferCleanup(ocmClient.Connection.Close)
 	})
