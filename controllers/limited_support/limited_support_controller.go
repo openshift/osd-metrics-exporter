@@ -16,6 +16,7 @@ package limited_support
 import (
 	"context"
 	"fmt"
+
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,9 +32,10 @@ import (
 const (
 	limitedSupportConfigMapName      = "limited-support"
 	limitedSupportConfigMapNamespace = "openshift-osd-metrics"
+	limitedSupportName               = "controller_limited_support"
 )
 
-var log = logf.Log.WithName("controller_limited_support")
+var log = logf.Log.WithName(limitedSupportName)
 
 // LimitedSupportConfigMapReconciler reconciles a ConfigMap object
 type LimitedSupportConfigMapReconciler struct {
@@ -71,6 +73,7 @@ func (r *LimitedSupportConfigMapReconciler) Reconcile(ctx context.Context, req c
 // SetupWithManager sets up the controller with the Manager.
 func (r *LimitedSupportConfigMapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named(limitedSupportName).
 		For(&corev1.ConfigMap{}).
 		WithEventFilter(predicate.Funcs{
 			CreateFunc: func(evt event.CreateEvent) bool {
