@@ -53,6 +53,8 @@ import (
 	promOperatorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -63,10 +65,10 @@ var (
 	scheme          = runtime.NewScheme()
 	setupLog        = ctrl.Log.WithName("setup")
 	metricsPort     = "8383"
-	watchNamespaces = []string{
-		"openshift-osd-metrics",
-		"openshift-config",
-		"openshift-machine-api",
+	watchNamespaces = map[string]cache.Config{
+		"openshift-osd-metrics": cache.Config{},
+		"openshift-config":      cache.Config{},
+		"openshift-machine-api": cache.Config{},
 	}
 )
 
@@ -99,13 +101,13 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		// Disable metrics serving
-		MetricsBindAddress: "0",
-		Port:               9443,
-
+		Metrics: metricsserver.Options{BindAddress: "0"},
+		//Port:    9443,
+		WebhookServer:          webhook.NewServer(webhook.Options{Port: 9443}),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "osd-metrics-exporter-lock",
-		Cache:                  cache.Options{Namespaces: watchNamespaces},
+		Cache:                  cache.Options{DefaultNamespaces: watchNamespaces},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
