@@ -72,7 +72,7 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	certBundle, _, err := validation.TrustBundleConfigMap(cfgMap)
+	certBundle, _, err := validation.TrustBundleConfigMap(cfgMap, names.TRUSTED_CA_BUNDLE_CONFIGMAP_KEY)
 	if err != nil {
 		// Reporting of failed validation is already funneled through CVO via ClusterOperatorDegraded. This is to explicitly catch this condition
 		// and handle gracefully rather then causing stacktrace.
