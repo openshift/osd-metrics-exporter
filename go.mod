@@ -12,7 +12,7 @@ require (
 	// go get github.com/openshift/api@release-4.12
 	github.com/openshift/api v0.0.0-20250530142525-6ff8c5bc1096
 	// go get github.com/openshift/cluster-network-operator@release-4.11
-	github.com/openshift/cluster-network-operator v0.0.0-20250704152333-29122af3abbe
+	github.com/openshift/cluster-network-operator v0.0.0-20250717224834-d751ce56ad3c
 	github.com/openshift/operator-custom-metrics v0.5.0
 	github.com/openshift/osde2e-common v0.0.0-20250703194955-d35624d4ce20
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.74.0
