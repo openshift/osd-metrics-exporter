@@ -137,8 +137,8 @@ github.com/openshift/library-go v0.0.0-20250313122028-477d5d90df06 h1:rhHuK51ZAA
 github.com/openshift/library-go v0.0.0-20250313122028-477d5d90df06/go.mod h1:GHwvopE5KXXCz4ULHp871sTPLLW+FB+hu/RIzlNwxx8=
 github.com/openshift/operator-custom-metrics v0.5.0 h1:iRZ6e3HvGSxw1dZgnY5emEN6fg9u/OhHfEC+u3ovhSE=
 github.com/openshift/operator-custom-metrics v0.5.0/go.mod h1:garCvCZK9l0RS0vCcz5anKsJSU60XgizYXllbMjRW5M=
-github.com/openshift/osde2e-common v0.0.0-20250703194955-d35624d4ce20 h1:tWau8nDTtE1XZjVB9LOIainDoyFXoCdy7nzfLRm/YEI=
-github.com/openshift/osde2e-common v0.0.0-20250703194955-d35624d4ce20/go.mod h1:RSH57cGEQRIkKzoXdzqpsA3oHp4zIzGHD97TmsqUTOo=
+github.com/openshift/osde2e-common v0.0.0-20250711133948-ac734b5fa6c5 h1:oxxA0byjK4Tb3rfVuQpjh/tQkBLxikReP4EgBYj+vJM=
+github.com/openshift/osde2e-common v0.0.0-20250711133948-ac734b5fa6c5/go.mod h1:RSH57cGEQRIkKzoXdzqpsA3oHp4zIzGHD97TmsqUTOo=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
