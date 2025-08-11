@@ -131,8 +131,8 @@ github.com/openshift/api v0.0.0-20250530142525-6ff8c5bc1096 h1:Rm691Jk4EONgIZLL1
 github.com/openshift/api v0.0.0-20250530142525-6ff8c5bc1096/go.mod h1:yk60tHAmHhtVpJQo3TwVYq2zpuP70iJIFDCmeKMIzPw=
 github.com/openshift/client-go v0.0.0-20250313171320-82b12a9e232b h1:nsobBSHT30SHY3j5PBG0E2i5AFY9cUxWuWk7Aen4qnQ=
 github.com/openshift/client-go v0.0.0-20250313171320-82b12a9e232b/go.mod h1:i1sQGfsFXs7ndmrcEQ2rj4f03aO+YrtKaPmrYvXu5Zg=
-github.com/openshift/cluster-network-operator v0.0.0-20250704152333-29122af3abbe h1:WQzm3z6Ptvu9VF65UeChjLHs1ptbn99gt4CL3CwkGjA=
-github.com/openshift/cluster-network-operator v0.0.0-20250704152333-29122af3abbe/go.mod h1:N3RWeOVPxl69zIkyHglXeYJ5TpaeRBxK2PhayEt1mJ4=
+github.com/openshift/cluster-network-operator v0.0.0-20250717224834-d751ce56ad3c h1:84Hsy9R/FAXL/SMn8f2MQGMqTWldZfBw2bMVCX0BvaA=
+github.com/openshift/cluster-network-operator v0.0.0-20250717224834-d751ce56ad3c/go.mod h1:N3RWeOVPxl69zIkyHglXeYJ5TpaeRBxK2PhayEt1mJ4=
 github.com/openshift/library-go v0.0.0-20250313122028-477d5d90df06 h1:rhHuK51ZAAQnE4TolB9Zfmcs78qKnV4dTkwIF7z0vMA=
 github.com/openshift/library-go v0.0.0-20250313122028-477d5d90df06/go.mod h1:GHwvopE5KXXCz4ULHp871sTPLLW+FB+hu/RIzlNwxx8=
 github.com/openshift/operator-custom-metrics v0.5.0 h1:iRZ6e3HvGSxw1dZgnY5emEN6fg9u/OhHfEC+u3ovhSE=
