@@ -1,4 +1,4 @@
-FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.2.0 AS builder
+FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.3.3 AS builder
 COPY go.mod /
 COPY go.sum /
 RUN go mod download
