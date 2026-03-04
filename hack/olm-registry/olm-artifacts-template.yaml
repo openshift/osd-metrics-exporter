@@ -133,6 +133,7 @@ objects:
                 - ""
               resources:
                 - configmaps
+                - secrets
               verbs:
                 - get
                 - list

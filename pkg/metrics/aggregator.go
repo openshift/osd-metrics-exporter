@@ -47,6 +47,7 @@ type AdoptionMetricsAggregator struct {
 	clusterID               *prometheus.GaugeVec
 	podsPreventingNodeDrain *prometheus.GaugeVec
 	cpms                    *prometheus.GaugeVec
+	pullSecretValid         *prometheus.GaugeVec
 	drainingMachines        map[string]drainingMachine
 	mutex                   sync.Mutex
 	aggregationInterval     time.Duration
@@ -68,6 +69,7 @@ func (a *AdoptionMetricsAggregator) GetMetrics() []prometheus.Collector {
 		a.clusterID,
 		a.podsPreventingNodeDrain,
 		a.cpms,
+		a.pullSecretValid,
 	}
 }
 
@@ -118,6 +120,11 @@ func NewMetricsAggregator(aggregationInterval time.Duration, clusterId string) *
 			Help:        "Indicates if the controlplanemachineset is enabled",
 			ConstLabels: map[string]string{"name": osdExporterValue},
 		}, []string{clusterIDLabel, cpmsInstanceTypeLabel}),
+		pullSecretValid: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name:        "pull_secret_valid",
+			Help:        "Indicates if the cluster pull secret is valid (1=valid, 0=invalid)",
+			ConstLabels: map[string]string{"name": osdExporterValue},
+		}, []string{clusterIDLabel}),
 		providerMap:         make(map[providerKey][]configv1.IdentityProviderType),
 		aggregationInterval: aggregationInterval,
 	}
@@ -327,4 +334,19 @@ func (a *AdoptionMetricsAggregator) GetClusterProxyCAValidMetrics() prometheus.G
 
 func (a *AdoptionMetricsAggregator) GetCPMSMetric() *prometheus.GaugeVec {
 	return a.cpms
+}
+
+func (a *AdoptionMetricsAggregator) SetPullSecretValid(uuid string, valid bool) {
+	labels := prometheus.Labels{
+		clusterIDLabel: uuid,
+	}
+	if valid {
+		a.pullSecretValid.With(labels).Set(1)
+	} else {
+		a.pullSecretValid.With(labels).Set(0)
+	}
+}
+
+func (a *AdoptionMetricsAggregator) GetPullSecretValidMetric() *prometheus.GaugeVec {
+	return a.pullSecretValid
 }

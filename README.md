@@ -18,7 +18,7 @@ A prometheus exporter to expose metrics about various features used in Openshift
 1. Create `Namespace`, `Role` and `RoleBinding`. Requires [yq](https://github.com/mikefarah/yq).
 
 ```shell
-for k in "Namespace" "Role" "RoleBinding"; do;
+for k in "Namespace" "Role" "RoleBinding"; do
   k=$k yq '.objects[].spec.resources[] | select(.kind==strenv(k))' \
     hack/olm-registry/olm-artifacts-template.yaml \
     | oc apply -f - ;
