@@ -1,0 +1,13 @@
+FROM scratch
+
+LABEL com.redhat.component="openshift-osd-metrics-exporter" \
+      io.k8s.description="osd-metrics-exporter Operator for OpenShift Dedicated" \
+      description="osd-metrics-exporter Operator for OpenShift Dedicated" \
+      distribution-scope="public" \
+      name="openshift/osd-metrics-exporter" \
+      url="https://github.com/openshift/osd-metrics-exporter" \
+      vendor="Red Hat, Inc." \
+      release="v0.0.0" \
+      version="v0.0.0"
+
+COPY * /package/
