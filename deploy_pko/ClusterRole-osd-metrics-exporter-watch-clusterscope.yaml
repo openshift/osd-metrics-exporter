@@ -1,0 +1,68 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: osd-metrics-exporter-watch-clusterscope
+  annotations:
+    package-operator.run/phase: rbac
+    package-operator.run/collision-protection: IfNoController
+rules:
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - oauths
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - proxies
+  - clusterversions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ''
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - user.openshift.io
+  resources:
+  - groups
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - machine.openshift.io
+  resources:
+  - machines
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - machine.openshift.io
+  resources:
+  - controlplanemachinesets
+  verbs:
+  - get
+  - list
+  - watch
