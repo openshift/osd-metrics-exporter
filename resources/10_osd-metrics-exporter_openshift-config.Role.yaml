@@ -1,4 +1,4 @@
-# Allow watching and reading configmaps in openshift config. 
+# Allow watching and reading configmaps and secrets in openshift config. 
 # 
 # This file is deployed using a hive syncset. When making changes to this file,
 # make sure to also update ../hack/olm-registry/olm-artifacts-template.yaml
@@ -12,6 +12,7 @@ rules:
       - ""
     resources:
       - configmaps
+      - secrets
     verbs:
       - get
       - list

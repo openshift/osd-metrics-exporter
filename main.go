@@ -43,6 +43,7 @@ import (
 	"github.com/openshift/osd-metrics-exporter/controllers/machine"
 	"github.com/openshift/osd-metrics-exporter/controllers/oauth"
 	"github.com/openshift/osd-metrics-exporter/controllers/proxy"
+	"github.com/openshift/osd-metrics-exporter/controllers/pullsecret"
 	"github.com/openshift/osd-metrics-exporter/pkg/metrics"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -107,7 +108,16 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "osd-metrics-exporter-lock",
-		Cache:                  cache.Options{DefaultNamespaces: watchNamespaces},
+		Cache: cache.Options{
+			DefaultNamespaces: watchNamespaces,
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Secret{}: {
+					Namespaces: map[string]cache.Config{
+						"openshift-config": {},
+					},
+				},
+			},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -184,6 +194,16 @@ func main() {
 		ClusterId:         clusterId,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Proxy")
+		os.Exit(1)
+	}
+
+	if err = (&pullsecret.PullSecretReconciler{
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		MetricsAggregator: metrics.GetMetricsAggregator(clusterId),
+		ClusterId:         clusterId,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PullSecret")
 		os.Exit(1)
 	}
 
