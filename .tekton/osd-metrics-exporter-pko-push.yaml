@@ -9,6 +9,7 @@ metadata:
     pipelinesascode.tekton.dev/max-keep-runs: '3'
     pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
       == "main"
+  creationTimestamp: null
   labels:
     appstudio.openshift.io/application: osd-metrics-exporter
     appstudio.openshift.io/component: osd-metrics-exporter-pko
@@ -26,11 +27,9 @@ spec:
   - name: dockerfile
     value: build/Dockerfile.pko
   - name: path-context
-    value: deploy_pko
-  - name: skip-preflight-cert-check
-    value: true
+    value: .
   taskRunTemplate:
-    serviceAccountName: build-pipeline-osd-metrics-exporter-pko
+    serviceAccountName: build-pipeline-osd-metrics-exporter
   workspaces:
   - name: git-auth
     secret:
