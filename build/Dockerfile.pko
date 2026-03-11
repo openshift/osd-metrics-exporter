@@ -10,4 +10,4 @@ LABEL com.redhat.component="openshift-osd-metrics-exporter" \
       release="v0.0.0" \
       version="v0.0.0"
 
-COPY deploy_pko/* /package/
+COPY * /package/
