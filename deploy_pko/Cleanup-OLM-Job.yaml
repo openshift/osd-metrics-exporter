@@ -12,7 +12,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: olm-cleanup
-  namespace: openshift-osd-metrics-exporter
+  namespace: openshift-osd-metrics
   annotations:
     package-operator.run/phase: cleanup-rbac
     package-operator.run/collision-protection: IfNoController
@@ -21,7 +21,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: olm-cleanup
-  namespace: openshift-osd-metrics-exporter
+  namespace: openshift-osd-metrics
   annotations:
     package-operator.run/phase: cleanup-rbac
     package-operator.run/collision-protection: IfNoController
@@ -42,7 +42,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: olm-cleanup
-  namespace: openshift-osd-metrics-exporter
+  namespace: openshift-osd-metrics
   annotations:
     package-operator.run/phase: cleanup-rbac
     package-operator.run/collision-protection: IfNoController
@@ -53,13 +53,13 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: olm-cleanup
-    namespace: openshift-osd-metrics-exporter
+    namespace: openshift-osd-metrics
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: olm-cleanup
-  namespace: openshift-osd-metrics-exporter
+  namespace: openshift-osd-metrics
   annotations:
     package-operator.run/phase: cleanup-deploy
     package-operator.run/collision-protection: IfNoController
@@ -85,7 +85,7 @@ spec:
               set -euxo pipefail
               # CUSTOMIZE: Update the label selector for your operator
               # Example pattern: operators.coreos.com/OPERATOR_NAME.NAMESPACE
-              oc -n openshift-osd-metrics-exporter delete csv -l "operators.coreos.com/osd-metrics-exporter.openshift-osd-metrics-exporter" || true
+              oc -n openshift-osd-metrics delete csv -l "operators.coreos.com/osd-metrics-exporter.openshift-osd-metrics" || true
               
               # CUSTOMIZE: Add any additional cleanup logic here
               # Examples:
