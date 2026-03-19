@@ -91,9 +91,13 @@ spec:
           fi
           
           echo "Old namespace found, checking if it's empty..."
-          
+
           # Check if namespace has any workload resources
+          # Temporarily disable pipefail for this command as oc get all may return non-zero
+          # exit codes for deprecation warnings, even when the command succeeds
+          set +o pipefail
           WORKLOADS=$(oc get all -n "$OLD_NS" --no-headers 2>/dev/null | wc -l)
+          set -o pipefail
 
           if [ "$WORKLOADS" -gt 0 ]; then
             echo "WARNING: Old namespace $OLD_NS is not empty (has $WORKLOADS resources)"
@@ -102,21 +106,16 @@ spec:
 
             # Create a ConfigMap to track manual cleanup requirement
             echo "Creating tracking ConfigMap for manual cleanup..."
-            cat <<EOF | oc apply -f -
-          apiVersion: v1
-          kind: ConfigMap
-          metadata:
-            name: old-namespace-cleanup-status
-            namespace: openshift-osd-metrics
-            labels:
-              cleanup-status: "manual-required"
-          data:
-            status: "manual-cleanup-required"
-            old-namespace: "$OLD_NS"
-            workload-count: "$WORKLOADS"
-            timestamp: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-            message: "Old namespace has workloads preventing automatic deletion. Manual intervention required."
-          EOF
+            oc create configmap old-namespace-cleanup-status \
+              -n openshift-osd-metrics \
+              --from-literal=status="manual-cleanup-required" \
+              --from-literal=old-namespace="$OLD_NS" \
+              --from-literal=workload-count="$WORKLOADS" \
+              --from-literal=timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+              --from-literal=message="Old namespace has workloads preventing automatic deletion. Manual intervention required." \
+              --dry-run=client -o yaml | \
+            oc label -f - cleanup-status=manual-required --local -o yaml | \
+            oc apply -f -
 
             echo "MANUAL CLEANUP REQUIRED: Check ConfigMap 'old-namespace-cleanup-status' in openshift-osd-metrics namespace"
             echo "To find affected clusters, query for ConfigMaps with label 'cleanup-status=manual-required'"
@@ -127,19 +126,14 @@ spec:
           oc delete namespace "$OLD_NS"
 
           # Create success ConfigMap
-          cat <<EOF | oc apply -f -
-          apiVersion: v1
-          kind: ConfigMap
-          metadata:
-            name: old-namespace-cleanup-status
-            namespace: openshift-osd-metrics
-            labels:
-              cleanup-status: "completed"
-          data:
-            status: "completed"
-            old-namespace: "$OLD_NS"
-            timestamp: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-            message: "Old namespace successfully deleted."
-          EOF
+          oc create configmap old-namespace-cleanup-status \
+            -n openshift-osd-metrics \
+            --from-literal=status="completed" \
+            --from-literal=old-namespace="$OLD_NS" \
+            --from-literal=timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            --from-literal=message="Old namespace successfully deleted." \
+            --dry-run=client -o yaml | \
+          oc label -f - cleanup-status=completed --local -o yaml | \
+          oc apply -f -
 
           echo "Successfully deleted old namespace $OLD_NS"
