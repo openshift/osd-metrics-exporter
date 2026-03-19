@@ -1,0 +1,85 @@
+---
+# Cleanup job to remove the old namespace after successful PKO deployment
+# The namespace was renamed from openshift-osd-metrics-exporter to openshift-osd-metrics
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cleanup-old-namespace
+  namespace: openshift-osd-metrics
+  annotations:
+    package-operator.run/phase: post-deploy-cleanup
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: osd-metrics-exporter-namespace-cleanup
+  annotations:
+    package-operator.run/phase: post-deploy-cleanup
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "services", "deployments", "daemonsets", "statefulsets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: osd-metrics-exporter-namespace-cleanup
+  annotations:
+    package-operator.run/phase: post-deploy-cleanup
+roleRef:
+  kind: ClusterRole
+  name: osd-metrics-exporter-namespace-cleanup
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: cleanup-old-namespace
+    namespace: openshift-osd-metrics
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cleanup-old-namespace
+  namespace: openshift-osd-metrics
+  annotations:
+    package-operator.run/phase: post-deploy-cleanup
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      serviceAccountName: cleanup-old-namespace
+      restartPolicy: OnFailure
+      containers:
+      - name: cleanup
+        image: quay.io/openshift/origin-cli:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -euo pipefail
+          
+          OLD_NS="openshift-osd-metrics-exporter"
+          
+          echo "Checking if old namespace exists: $OLD_NS"
+          
+          if ! oc get namespace "$OLD_NS" &>/dev/null; then
+            echo "Old namespace $OLD_NS does not exist, nothing to clean up"
+            exit 0
+          fi
+          
+          echo "Old namespace found, checking if it's empty..."
+          
+          # Check if namespace has any workload resources
+          WORKLOADS=$(oc get all -n "$OLD_NS" --no-headers 2>/dev/null | wc -l)
+          
+          if [ "$WORKLOADS" -gt 0 ]; then
+            echo "WARNING: Old namespace $OLD_NS is not empty (has $WORKLOADS resources)"
+            echo "Skipping deletion for safety. Manual cleanup required."
+            exit 0
+          fi
+          
+          echo "Old namespace $OLD_NS is empty, safe to delete"
+          oc delete namespace "$OLD_NS"
+          echo "Successfully deleted old namespace $OLD_NS"
