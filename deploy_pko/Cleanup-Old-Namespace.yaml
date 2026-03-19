@@ -1,6 +1,20 @@
 ---
 # Cleanup job to remove the old namespace after successful PKO deployment
 # The namespace was renamed from openshift-osd-metrics-exporter to openshift-osd-metrics
+#
+# TRACKING CLUSTERS REQUIRING MANUAL CLEANUP:
+# This job creates a ConfigMap 'old-namespace-cleanup-status' to track cleanup status:
+#   - Label 'cleanup-status=manual-required' indicates manual cleanup needed
+#   - Label 'cleanup-status=completed' indicates successful automatic cleanup
+#
+# To find clusters requiring manual intervention across your fleet:
+#   oc get configmap old-namespace-cleanup-status -n openshift-osd-metrics \
+#     -l cleanup-status=manual-required --all-namespaces
+#
+# The ConfigMap contains:
+#   - workload-count: Number of resources blocking deletion
+#   - timestamp: When the cleanup was attempted
+#   - message: Description of the issue
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -22,6 +36,13 @@ rules:
   - apiGroups: [""]
     resources: ["pods", "services", "deployments", "daemonsets", "statefulsets"]
     verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create", "update", "patch", "get"]
+    resourceNames: ["old-namespace-cleanup-status"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -73,13 +94,52 @@ spec:
           
           # Check if namespace has any workload resources
           WORKLOADS=$(oc get all -n "$OLD_NS" --no-headers 2>/dev/null | wc -l)
-          
+
           if [ "$WORKLOADS" -gt 0 ]; then
             echo "WARNING: Old namespace $OLD_NS is not empty (has $WORKLOADS resources)"
-            echo "Skipping deletion for safety. Manual cleanup required."
+            echo "Listing resources in the old namespace:"
+            oc get all -n "$OLD_NS" || true
+
+            # Create a ConfigMap to track manual cleanup requirement
+            echo "Creating tracking ConfigMap for manual cleanup..."
+            cat <<EOF | oc apply -f -
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: old-namespace-cleanup-status
+            namespace: openshift-osd-metrics
+            labels:
+              cleanup-status: "manual-required"
+          data:
+            status: "manual-cleanup-required"
+            old-namespace: "$OLD_NS"
+            workload-count: "$WORKLOADS"
+            timestamp: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            message: "Old namespace has workloads preventing automatic deletion. Manual intervention required."
+          EOF
+
+            echo "MANUAL CLEANUP REQUIRED: Check ConfigMap 'old-namespace-cleanup-status' in openshift-osd-metrics namespace"
+            echo "To find affected clusters, query for ConfigMaps with label 'cleanup-status=manual-required'"
             exit 0
           fi
-          
+
           echo "Old namespace $OLD_NS is empty, safe to delete"
           oc delete namespace "$OLD_NS"
+
+          # Create success ConfigMap
+          cat <<EOF | oc apply -f -
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: old-namespace-cleanup-status
+            namespace: openshift-osd-metrics
+            labels:
+              cleanup-status: "completed"
+          data:
+            status: "completed"
+            old-namespace: "$OLD_NS"
+            timestamp: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            message: "Old namespace successfully deleted."
+          EOF
+
           echo "Successfully deleted old namespace $OLD_NS"
