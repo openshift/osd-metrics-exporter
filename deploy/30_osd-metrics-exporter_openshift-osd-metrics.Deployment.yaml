@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: osd-metrics-exporter
-  namespace: openshift-osd-metrics
 spec:
   replicas: 1
   selector:
