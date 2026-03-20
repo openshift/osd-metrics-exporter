@@ -26,9 +26,9 @@ spec:
         kind: Deployment
   config:
     openAPIV3Schema:
+      type: object
       properties:
         image:
           description: Operator image to deploy
           type: string
           default: None
-        type: object
