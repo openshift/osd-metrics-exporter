@@ -1,0 +1,16 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: osd-metrics-exporter
+  namespace: openshift-machine-api
+  annotations:
+    package-operator.run/phase: rbac
+    package-operator.run/collision-protection: IfNoController
+subjects:
+  - kind: ServiceAccount
+    name: osd-metrics-exporter
+    namespace: openshift-osd-metrics
+roleRef:
+  kind: Role
+  name: osd-metrics-exporter
+  apiGroup: rbac.authorization.k8s.io
