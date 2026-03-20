@@ -1,0 +1,26 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: osd-metrics-exporter
+  namespace: openshift-machine-api
+  annotations:
+    package-operator.run/phase: rbac
+    package-operator.run/collision-protection: IfNoController
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - machine.openshift.io
+    resources:
+      - controlplanemachinesets
+    verbs:
+      - get
+      - list
+      - watch

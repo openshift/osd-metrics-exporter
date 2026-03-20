@@ -13,7 +13,7 @@ metadata:
     appstudio.openshift.io/application: osd-metrics-exporter
     appstudio.openshift.io/component: osd-metrics-exporter-pko
     pipelines.appstudio.openshift.io/type: build
-  name: osd-metrics-exporter-pko-on-pull_request
+  name: osd-metrics-exporter-pko-on-pull-request
   namespace: osd-metrics-exporter-tenant
 spec:
   params:
