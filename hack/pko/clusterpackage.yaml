@@ -29,8 +29,8 @@ objects:
       name: osd-metrics-exporter-stage
     spec:
       clusterDeploymentSelector:
-      matchLabels:
-        api.openshift.com/managed: 'true'
+        matchLabels:
+          api.openshift.com/managed: "true"
       resourceApplyMode: Sync
       resources:
         - apiVersion: package-operator.run/v1alpha1
