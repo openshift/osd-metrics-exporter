@@ -1,6 +1,6 @@
 FROM scratch
 
-LABEL com.redhat.component="openshift-osd-metrics-exporter" \
+LABEL com.redhat.component="openshift-osd-metrics" \
       io.k8s.description="osd-metrics-exporter Operator for OpenShift Dedicated" \
       description="osd-metrics-exporter Operator for OpenShift Dedicated" \
       distribution-scope="public" \
