@@ -3,6 +3,7 @@ kind: Role
 metadata:
   annotations:
     package-operator.run/phase: rbac
+    package-operator.run/collision-protection: IfNoController
   name: prometheus-k8s
   namespace: openshift-osd-metrics
 rules:
