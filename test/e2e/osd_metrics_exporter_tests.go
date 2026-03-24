@@ -6,6 +6,7 @@ package osde2etests
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -126,9 +127,20 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 		ginkgo.By("checking Prometheus is scraping the exporter")
 		results, err := prom.InstantQuery(ctx, `up{job="osd-metrics-exporter"}`)
 		Expect(err).ShouldNot(HaveOccurred(), "failed to query prometheus")
-
-		result := results[0].Value
-		Expect(int(result)).Should(BeNumerically("==", 1), "prometheus exporter is not healthy")
+		// Wait for Prometheus to have scraped at least once
+		Eventually(ctx, func(ctx context.Context) error {
+			results, err = prom.InstantQuery(ctx, `up{job="osd-metrics-exporter"}`)
+			if err != nil {
+				return err
+			}
+			if len(results) == 0 {
+				return fmt.Errorf("prometheus has not scraped the exporter yet")
+			}
+			if int(results[0].Value) != 1 {
+				return fmt.Errorf("prometheus exporter not healthy: value=%v", results[0].Value)
+			}
+			return nil
+		}, 3*time.Minute, 10*time.Second).Should(Succeed(), "prometheus should scrape and report exporter as healthy")
 
 		user := clustersmgmtv1.NewHTPasswdIdentityProvider().Username(rand.String(14)).Password(generateRandomString(14))
 
