@@ -13,4 +13,5 @@ subjects:
 roleRef:
   kind: Role
   name: osd-metrics-exporter
+  namespace: openshift-osd-metrics
   apiGroup: rbac.authorization.k8s.io

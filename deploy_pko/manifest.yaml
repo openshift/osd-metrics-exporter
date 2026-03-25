@@ -12,6 +12,8 @@ spec:
   - name: namespace
   - name: rbac
   - name: deploy
+  - name: cleanup-rbac
+  - name: cleanup-deploy
   availabilityProbes:
   - probes:
     - condition:
