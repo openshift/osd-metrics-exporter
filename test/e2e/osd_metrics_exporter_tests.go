@@ -158,6 +158,9 @@ var _ = ginkgo.Describe("osd-metrics-exporter", ginkgo.Ordered, func() {
 			if err != nil {
 				return 0, err
 			}
+			if len(results) == 0 {
+				return 0, fmt.Errorf("identity_provider metric not found yet")
+			}
 			return int(results[0].Value), nil
 		}).
 			WithPolling(5*time.Second).
