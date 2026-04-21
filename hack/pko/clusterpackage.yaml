@@ -26,13 +26,19 @@ objects:
         managed.openshift.io/gitHash: ${IMAGE_TAG}
         managed.openshift.io/gitRepoName: ${REPO_NAME}
         managed.openshift.io/osd: "true"
-      name: osd-metrics-exporter-stage
+      name: osd-metrics-exporter-pko
     spec:
       clusterDeploymentSelector:
         matchLabels:
           api.openshift.com/managed: "true"
       resourceApplyMode: Sync
       resources:
+        - apiVersion: v1
+          kind: Namespace
+          metadata:
+            labels:
+              openshift.io/cluster-monitoring: 'true'
+            name: ${NAMESPACE}
         - apiVersion: package-operator.run/v1alpha1
           kind: ClusterPackage
           metadata:
