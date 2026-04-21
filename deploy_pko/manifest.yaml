@@ -9,10 +9,10 @@ spec:
   - Cluster
   phases:
   - name: crds
-  - name: cleanup-rbac
-  - name: cleanup-deploy
   - name: rbac
   - name: deploy
+  - name: cleanup-rbac
+  - name: cleanup-deploy
   availabilityProbes:
   - probes:
     - condition:
