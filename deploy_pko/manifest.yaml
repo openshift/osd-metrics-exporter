@@ -9,7 +9,6 @@ spec:
   - Cluster
   phases:
   - name: crds
-  - name: namespace
   - name: cleanup-rbac
   - name: cleanup-deploy
   - name: rbac
