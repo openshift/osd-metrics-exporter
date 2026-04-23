@@ -85,17 +85,17 @@ spec:
               #!/bin/sh
               set -euxo pipefail
 
-              # Delete Subscription first so it cannot recreate the CSV
+              # Delete Subscription first so OLM cannot recreate the CSV
               echo "Deleting Subscription for osd-metrics-exporter..."
-              oc -n openshift-osd-metrics delete subscription.operators.coreos.com osd-metrics-exporter || true
+              oc -n openshift-osd-metrics delete subscription.operators.coreos.com osd-metrics-exporter --ignore-not-found --wait
 
-              # Delete ClusterServiceVersion(s) for osd-metrics-exporter
+              # Delete ClusterServiceVersion(s) - safe now that Subscription is gone
               echo "Deleting CSV for osd-metrics-exporter..."
-              oc -n openshift-osd-metrics delete csv -l "operators.coreos.com/osd-metrics-exporter.openshift-osd-metrics" || true
+              oc -n openshift-osd-metrics delete csv -l "operators.coreos.com/osd-metrics-exporter.openshift-osd-metrics" --ignore-not-found --wait
 
               # Delete CatalogSource
               echo "Deleting CatalogSource for osd-metrics-exporter..."
-              oc -n openshift-osd-metrics delete catalogsource.operators.coreos.com osd-metrics-exporter-registry || true
+              oc -n openshift-osd-metrics delete catalogsource.operators.coreos.com osd-metrics-exporter-registry --ignore-not-found --wait
 
               echo "OLM cleanup complete"
           resources:
