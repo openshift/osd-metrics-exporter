@@ -79,7 +79,7 @@ spec:
       priorityClassName: openshift-user-critical
       restartPolicy: Never
       containers:
-        - name: delete-csv
+        - name: olm-cleanup
           image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
           imagePullPolicy: Always
           command:
