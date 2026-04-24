@@ -1,12 +1,10 @@
 ---
-# This Job cleans up old OLM resources after migrating to PKO
-# IMPORTANT: Review and customize this template before deploying!
-# 
-# Things to customize:
-# 1. Adjust the namespace if needed
-# 2. Modify resource filters (CSV names, labels, etc.)
-# 3. Review RBAC permissions
-# 4. Update the cleanup logic for your specific operator
+# This Job cleans up OLM resources after migrating to PKO
+# Resources cleaned up:
+#   - Subscription
+#   - ClusterServiceVersion (CSV)
+#   - CatalogSource
+#   - OperatorGroup
 #
 apiVersion: v1
 kind: ServiceAccount
@@ -38,6 +36,12 @@ rules:
       - get
       - watch
       - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -65,6 +69,7 @@ metadata:
     package-operator.run/phase: cleanup-deploy
     package-operator.run/collision-protection: IfNoController
 spec:
+  ttlSecondsAfterFinished: 100
   template:
     metadata:
       annotations:
@@ -74,7 +79,7 @@ spec:
       priorityClassName: openshift-user-critical
       restartPolicy: Never
       containers:
-        - name: delete-csv
+        - name: olm-cleanup
           image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
           imagePullPolicy: Always
           command:
@@ -84,19 +89,42 @@ spec:
               #!/bin/sh
               set -euxo pipefail
 
-              # Delete ClusterServiceVersion(s) for osd-metrics-exporter
-              echo "Deleting CSV for osd-metrics-exporter..."
-              oc -n openshift-osd-metrics delete csv -l "operators.coreos.com/osd-metrics-exporter.openshift-osd-metrics" || true
+              ERRORS=""
+              NS="openshift-osd-metrics"
 
-              # Delete Subscription
-              echo "Deleting Subscription for osd-metrics-exporter..."
-              oc -n openshift-osd-metrics delete subscription.operators.coreos.com osd-metrics-exporter || true
+              # Delete Subscription first so OLM cannot recreate the CSV
+              oc -n "$NS" delete subscription.operators.coreos.com osd-metrics-exporter --ignore-not-found=true \
+                || ERRORS="${ERRORS}Failed to delete Subscription. "
+
+              # Delete ClusterServiceVersion(s) - safe now that Subscription is gone
+              oc -n "$NS" delete csv -l "operators.coreos.com/osd-metrics-exporter.${NS}" --ignore-not-found=true \
+                || ERRORS="${ERRORS}Failed to delete CSV. "
 
               # Delete CatalogSource
-              echo "Deleting CatalogSource for osd-metrics-exporter..."
-              oc -n openshift-osd-metrics delete catalogsource.operators.coreos.com osd-metrics-exporter-registry || true
+              oc -n "$NS" delete catalogsource.operators.coreos.com osd-metrics-exporter-registry --ignore-not-found=true \
+                || ERRORS="${ERRORS}Failed to delete CatalogSource. "
 
-              echo "OLM cleanup complete"
+              # Delete OperatorGroup
+              oc -n "$NS" delete operatorgroup osd-metrics-exporter --ignore-not-found=true \
+                || ERRORS="${ERRORS}Failed to delete OperatorGroup. "
+
+              if [ -n "$ERRORS" ]; then
+                echo "WARNING: OLM cleanup completed with errors: ${ERRORS}"
+                oc create -f - <<EVENTEOF || true
+              apiVersion: v1
+              kind: Event
+              metadata:
+                generateName: olm-cleanup-warning-
+                namespace: ${NS}
+              involvedObject:
+                apiVersion: v1
+                kind: Namespace
+                name: ${NS}
+              reason: OLMCleanupErrors
+              message: "OLM cleanup job completed with errors: ${ERRORS}"
+              type: Warning
+              EVENTEOF
+              fi
           resources:
             requests:
               cpu: 100m
