@@ -32,6 +32,7 @@ spec:
           command:
             - osd-metrics-exporter
           imagePullPolicy: Always
+          terminationMessagePolicy: FallbackToLogsOnError
           livenessProbe:
             httpGet:
               path: /healthz

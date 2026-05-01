@@ -81,6 +81,7 @@ spec:
         - name: olm-cleanup
           image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
           imagePullPolicy: Always
+          terminationMessagePolicy: FallbackToLogsOnError
           command:
             - sh
             - -c
