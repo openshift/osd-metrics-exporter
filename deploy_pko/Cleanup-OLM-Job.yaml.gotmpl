@@ -63,12 +63,12 @@ subjects:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: olm-cleanup
+  name: olm-cleanup-{{ .config.version }}
   namespace: openshift-osd-metrics
   annotations:
     package-operator.run/phase: cleanup-deploy
-    package-operator.run/collision-protection: IfNoController
 spec:
+  backoffLimit: 40
   template:
     metadata:
       annotations:
@@ -76,7 +76,7 @@ spec:
     spec:
       serviceAccountName: olm-cleanup
       priorityClassName: openshift-user-critical
-      restartPolicy: Never
+      restartPolicy: OnFailure
       containers:
         - name: olm-cleanup
           image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
@@ -93,24 +93,24 @@ spec:
               NS="openshift-osd-metrics"
 
               # Delete Subscription first so OLM cannot recreate the CSV
-              oc -n "$NS" delete subscription.operators.coreos.com osd-metrics-exporter --ignore-not-found=true \
+              oc -n "$NS" delete subscription.operators.coreos.com osd-metrics-exporter --timeout=300s --ignore-not-found=true \
                 || ERRORS="${ERRORS}Failed to delete Subscription. "
 
               # Delete ClusterServiceVersion(s) - safe now that Subscription is gone
-              oc -n "$NS" delete csv -l "operators.coreos.com/osd-metrics-exporter.${NS}" --ignore-not-found=true \
+              oc -n "$NS" delete csv -l "operators.coreos.com/osd-metrics-exporter.${NS}" --timeout=300s --ignore-not-found=true \
                 || ERRORS="${ERRORS}Failed to delete CSV. "
 
               # Delete CatalogSource
-              oc -n "$NS" delete catalogsource.operators.coreos.com osd-metrics-exporter-registry --ignore-not-found=true \
+              oc -n "$NS" delete catalogsource.operators.coreos.com osd-metrics-exporter-registry --timeout=300s --ignore-not-found=true \
                 || ERRORS="${ERRORS}Failed to delete CatalogSource. "
 
               # Delete OperatorGroup
-              oc -n "$NS" delete operatorgroup osd-metrics-exporter --ignore-not-found=true \
+              oc -n "$NS" delete operatorgroup osd-metrics-exporter --timeout=300s --ignore-not-found=true \
                 || ERRORS="${ERRORS}Failed to delete OperatorGroup. "
 
               if [ -n "$ERRORS" ]; then
-                echo "WARNING: OLM cleanup completed with errors: ${ERRORS}"
-                oc create -f - <<EVENTEOF || true
+                echo "ERROR: OLM cleanup failed, will retry: ${ERRORS}" >&2
+                oc create -f - <<EVENTEOF || echo "Failed to create warning event" >&2
               apiVersion: v1
               kind: Event
               metadata:
@@ -121,9 +121,10 @@ spec:
                 kind: Namespace
                 name: ${NS}
               reason: OLMCleanupErrors
-              message: "OLM cleanup job completed with errors: ${ERRORS}"
+              message: "OLM cleanup job failed, will retry: ${ERRORS}"
               type: Warning
               EVENTEOF
+                exit 1
               fi
           resources:
             requests:
