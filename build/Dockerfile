@@ -1,4 +1,4 @@
-FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.3.5 AS builder
+FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.3.6 AS builder
 COPY go.mod /
 COPY go.sum /
 RUN go mod download
@@ -6,7 +6,7 @@ COPY . /osd-metrics-exporter
 WORKDIR /osd-metrics-exporter
 RUN make go-build
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7-1776833838
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8-1777460003
 ENV OPERATOR=/usr/local/bin/osd-metrics-exporter \
     USER_UID=1001 \
     USER_NAME=osd-metrics-exporter
