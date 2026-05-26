@@ -92,3 +92,7 @@ tags
 
 # Local docker configuration
 .docker/*
+
+# Claude Code configuration files
+CLAUDE.md
+.claude/
