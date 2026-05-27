@@ -141,8 +141,8 @@ github.com/openshift/library-go v0.0.0-20250729191057-91376e1b394e h1:xYT+P++PSc
 github.com/openshift/library-go v0.0.0-20250729191057-91376e1b394e/go.mod h1:tptKNust9MdRI0p90DoBSPHIrBa9oh+Rok59tF0vT8c=
 github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20241205171354-8006f302fd12 h1:AKx/w1qpS8We43bsRgf8Nll3CGlDHpr/WAXvuedTNZI=
 github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20241205171354-8006f302fd12/go.mod h1:7Du3c42kxCUegi0IImZ1wUQzMBVecgIHjR1C+NkhLQo=
-github.com/openshift/operator-custom-metrics v0.5.0 h1:iRZ6e3HvGSxw1dZgnY5emEN6fg9u/OhHfEC+u3ovhSE=
-github.com/openshift/operator-custom-metrics v0.5.0/go.mod h1:garCvCZK9l0RS0vCcz5anKsJSU60XgizYXllbMjRW5M=
+github.com/openshift/operator-custom-metrics v0.5.1 h1:1pk4YMUV+cmqfV0f2fyxY62cl7Gc76kwudJT+EdcfYM=
+github.com/openshift/operator-custom-metrics v0.5.1/go.mod h1:0dYDHi/ubKRWzsC9MmW6bRMdBgo1QSOuAh3GupTe0Sw=
 github.com/openshift/osde2e-common v0.0.0-20250711133948-ac734b5fa6c5 h1:oxxA0byjK4Tb3rfVuQpjh/tQkBLxikReP4EgBYj+vJM=
 github.com/openshift/osde2e-common v0.0.0-20250711133948-ac734b5fa6c5/go.mod h1:RSH57cGEQRIkKzoXdzqpsA3oHp4zIzGHD97TmsqUTOo=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
