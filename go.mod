@@ -6,7 +6,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
-	github.com/openshift-online/ocm-sdk-go v0.1.469
+	github.com/openshift-online/ocm-sdk-go v0.1.501
 	// go get github.com/openshift/api@release-4.12
 	github.com/openshift/api v0.0.0-20250808142411-c974eeafe3f1
 	// go get github.com/openshift/cluster-network-operator@release-4.11
@@ -57,7 +57,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
-	github.com/openshift-online/ocm-api-model/clientapi v0.0.0-20250619114224-37dc3401307a // indirect
+	github.com/openshift-online/ocm-api-model/clientapi v0.0.456 // indirect
 	github.com/openshift-online/ocm-api-model/model v0.0.456 // indirect
 	github.com/openshift/client-go v0.0.0-20250811113315-c2dfb51e2d06 // indirect
 	github.com/openshift/library-go v0.0.0-20250729191057-91376e1b394e // indirect
