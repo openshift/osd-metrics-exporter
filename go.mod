@@ -92,11 +92,13 @@ require (
 	sigs.k8s.io/e2e-framework v0.5.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-require go.yaml.in/yaml/v2 v2.4.4 // indirect
+require (
+	go.yaml.in/yaml/v2 v2.4.4 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
+)
 
 replace (
 	github.com/onsi/ginkgo/v2 => github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20241205171354-8006f302fd12
