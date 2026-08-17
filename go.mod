@@ -79,7 +79,6 @@ require (
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect
-	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -96,7 +95,10 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-require go.yaml.in/yaml/v2 v2.4.4 // indirect
+require (
+	go.yaml.in/yaml/v2 v2.4.4 // indirect
+	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
+)
 
 replace (
 	github.com/onsi/ginkgo/v2 => github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20241205171354-8006f302fd12
