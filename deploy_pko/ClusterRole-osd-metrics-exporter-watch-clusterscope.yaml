@@ -49,7 +49,14 @@ rules:
   - get
   - list
   - watch
-  - update
+- apiGroups:
+  - user.openshift.io
+  resources:
+  - groups
+  resourceNames:
+  - cluster-admins
+  verbs:
+  - patch
 - apiGroups:
   - machine.openshift.io
   resources:
