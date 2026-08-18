@@ -65,8 +65,9 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	if group.DeletionTimestamp.IsZero() {
 		if !utils.ContainsString(group.Finalizers, finalizer) {
+			original := group.DeepCopy()
 			controllerutil.AddFinalizer(group, finalizer)
-			if err := r.Update(ctx, group); err != nil {
+			if err := r.Patch(ctx, group, client.MergeFrom(original)); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -74,8 +75,9 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	} else {
 		r.MetricsAggregator.SetClusterAdmin(r.ClusterId, false)
 		if utils.ContainsString(group.Finalizers, finalizer) {
+			original := group.DeepCopy()
 			controllerutil.RemoveFinalizer(group, finalizer)
-			if err := r.Update(ctx, group); err != nil {
+			if err := r.Patch(ctx, group, client.MergeFrom(original)); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
