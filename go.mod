@@ -39,7 +39,6 @@ require (
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/glog v1.2.5 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
@@ -96,7 +95,10 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-require go.yaml.in/yaml/v2 v2.4.4 // indirect
+require (
+	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
+	go.yaml.in/yaml/v2 v2.4.4 // indirect
+)
 
 replace (
 	github.com/onsi/ginkgo/v2 => github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20241205171354-8006f302fd12
