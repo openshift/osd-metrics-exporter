@@ -15,24 +15,25 @@ A prometheus exporter to expose metrics about various features used in Openshift
 
 # Local development without OLM
 
-1. Create `Namespace`, `Role` and `RoleBinding`. Requires [yq](https://github.com/mikefarah/yq).
+1. Create the namespace and Prometheus permissions.
 
 ```shell
-for k in "Namespace" "Role" "RoleBinding"; do
-  k=$k yq '.objects[].spec.resources[] | select(.kind==strenv(k))' \
-    hack/olm-registry/olm-artifacts-template.yaml \
-    | oc apply -f - ;
-done
+oc create namespace openshift-osd-metrics --dry-run=client -o yaml | oc apply -f -
+oc label namespace openshift-osd-metrics openshift.io/cluster-monitoring=true --overwrite
+oc apply -f ./deploy_pko/Role-prometheus-k8s.yaml
+oc apply -f ./deploy_pko/RoleBinding-prometheus-k8s.yaml
 ```
 
-2. Create `(Cluster-)Role`, `(Cluster-)RoleBinding` and `ServiceAccount`.
+2. Create the `ServiceAccount` and RBAC required by the operator. These manifests are shared with the Package Operator deployment.
 
 ```shell
-oc apply -f ./deploy/10_osd-metrics-exporter.ClusterRole.yaml
-oc apply -f ./deploy/10_osd-metrics-exporter_openshift-osd-metrics.Role.yaml
-oc apply -f ./deploy/10_osd-metrics-exporter_openshift-osd-metrics.ServiceAccount.yaml
-oc apply -f ./deploy/20_osd-metrics-exporter.ClusterRoleBinding.yaml
-oc apply -f ./deploy/20_osd-metrics-exporter_openshift-osd-metrics.RoleBinding.yaml
+oc apply -f ./deploy_pko/ServiceAccount-osd-metrics-exporter.yaml
+oc apply -f ./deploy_pko/ClusterRole-osd-metrics-exporter-watch-clusterscope.yaml
+oc apply -f ./deploy_pko/ClusterRoleBinding-osd-metrics-exporter-watch-clusterscope.yaml
+oc apply -f ./deploy_pko/Role-osd-metrics-exporter.yaml
+oc apply -f ./deploy_pko/RoleBinding-osd-metrics-exporter.yaml
+oc apply -f ./deploy_pko/Role-osd-metrics-exporter-openshift-machine-api.yaml
+oc apply -f ./deploy_pko/RoleBinding-osd-metrics-exporter-openshift-machine-api.yaml
 oc apply -f ./resources/10_osd-metrics-exporter_openshift-config.Role.yaml
 oc apply -f ./resources/10_osd-metrics-exporter_openshift-config.RoleBinding.yaml
 ```
