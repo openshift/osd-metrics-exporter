@@ -1,6 +1,14 @@
 reviewers:
+- geowa4
+- eth1030
+- BATMAN-JD
+- AlexSmithGH
 - srep-functional-team-rocket
 approvers:
+- geowa4
+- eth1030
+- BATMAN-JD
+- AlexSmithGH
 - srep-functional-team-rocket
 - rosa-staff-engineers
 maintainers:
