@@ -1,0 +1,14 @@
+FROM quay.io/redhat-services-prod/openshift/boilerplate:latest AS builder
+COPY go.mod /
+COPY go.sum /
+RUN go mod download
+COPY . /osd-metrics-exporter
+WORKDIR /osd-metrics-exporter
+RUN make go-build
+
+# Keep the FIPS-enabled Go compiler above; only its application binary is copied.
+FROM registry.access.redhat.com/hi/core-runtime:2.43-openssl-fips@sha256:dda4ca9f205064c1391168713fae4dfe32057f3a1e619540db34f9d167b71c74 AS runner
+ENV OPERATOR=/usr/local/bin/osd-metrics-exporter
+COPY --from=builder /osd-metrics-exporter/build/_output/bin/osd-metrics-exporter ${OPERATOR}
+# The hardened base supplies a non-root user; no shell wrapper is required.
+ENTRYPOINT ["/usr/local/bin/osd-metrics-exporter"]
