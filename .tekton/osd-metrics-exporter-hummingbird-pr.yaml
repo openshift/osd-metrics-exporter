@@ -12,7 +12,7 @@ metadata:
       == "main"
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: osd-metrics-exporter-hummingbird
+    appstudio.openshift.io/application: osd-metrics-exporter
     appstudio.openshift.io/component: osd-metrics-exporter-hummingbird
     pipelines.appstudio.openshift.io/type: build
   name: osd-metrics-exporter-hummingbird-on-pull-request
