@@ -4,22 +4,22 @@ go 1.24.0
 
 require (
 	github.com/google/go-cmp v0.7.0
-	github.com/onsi/ginkgo/v2 v2.23.4
-	github.com/onsi/gomega v1.37.0
-	github.com/openshift-online/ocm-sdk-go v0.1.501
+	github.com/onsi/ginkgo/v2 v2.28.2
+	github.com/onsi/gomega v1.42.0
+	github.com/openshift-online/ocm-sdk-go v0.1.521
 	// go get github.com/openshift/api@release-4.12
-	github.com/openshift/api v0.0.0-20250808142411-c974eeafe3f1
+	github.com/openshift/api 950d0a970cb7
 	// go get github.com/openshift/cluster-network-operator@release-4.11
 	github.com/openshift/cluster-network-operator v0.0.0-20250717224834-d751ce56ad3c
 	github.com/openshift/operator-custom-metrics v0.5.1
-	github.com/openshift/osde2e-common v0.0.0-20250711133948-ac734b5fa6c5
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.74.0
+	github.com/openshift/osde2e-common v0.0.0-20261009161925-ad86af2152ac
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.89.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
-	k8s.io/api v0.33.3
-	k8s.io/apimachinery v0.33.3
-	k8s.io/client-go v0.33.2
-	sigs.k8s.io/controller-runtime v0.20.3
+	k8s.io/api v0.34.10
+	k8s.io/apimachinery v0.34.10
+	k8s.io/client-go v0.34.10
+	sigs.k8s.io/controller-runtime v0.22.5
 )
 
 require (
@@ -99,7 +99,7 @@ require (
 require go.yaml.in/yaml/v2 v2.4.4 // indirect
 
 replace (
-	github.com/onsi/ginkgo/v2 => github.com/openshift/onsi-ginkgo/v2 v2.6.1-0.20241205171354-8006f302fd12
+	github.com/onsi/ginkgo/v2 => github.com/openshift/onsi-ginkgo/v2 d252783cc604
 	k8s.io/api => github.com/openshift/kubernetes/staging/src/k8s.io/api v0.0.0-20250716113245-b94367cabf3e
 	k8s.io/apiextensions-apiserver => github.com/openshift/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20250716113245-b94367cabf3e
 	k8s.io/apimachinery => github.com/openshift/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20250716113245-b94367cabf3e
